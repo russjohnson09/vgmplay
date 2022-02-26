@@ -13,3 +13,4 @@ Specifically to play the original shining force soundtrack.
 
 
 
+# Sega Genesis Specs
