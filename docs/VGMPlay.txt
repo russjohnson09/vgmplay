@@ -90,6 +90,18 @@ It depends on the files you want to play.
 
 Minimum Reqiurements
 --------------------
+
+atmega328p has a clock speed of 20 MHz
+
+https://segaretro.org/Sega_Mega_Drive/Technical_specifications#CPU
+
+CPU
+Main CPU: Motorola 68000
+Clock rate: 7.670454 MHz (NTSC), 7.600489 MHz (PAL)
+
+
+
+
 Software Emulation:
 
 166 MHz should be enough for SN76496 + YM2612.

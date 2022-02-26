@@ -2234,6 +2234,8 @@ const char* GetAccurateChipName(UINT8 ChipID, UINT8 SubType)
 
 UINT32 GetChipClock(VGM_HEADER* FileHead, UINT8 ChipID, UINT8* RetSubType)
 {
+	// fprintf(stderr, "GetChipClock\n");
+
 	UINT32 Clock;
 	UINT8 SubType;
 	UINT8 CurChp;

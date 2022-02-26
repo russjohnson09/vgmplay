@@ -5,7 +5,6 @@
 #include <math.h>
 #include "stdbool.h"
 
-//#define DISABLE_HW_SUPPORT	// disable support for OPL hardware
 #ifdef __NetBSD__	// Thanks to nextvolume
 #warning "Disabling OPL Mapper functionality, current code does not work on NetBSD"
 #define DISABLE_HW_SUPPORT	// Current code does not work on NetBSD

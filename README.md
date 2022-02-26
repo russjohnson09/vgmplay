@@ -71,3 +71,11 @@ Thanks to grauw for macOS compilation instructions.
 4. After the installation is done, do `git clone https://github.com/vgmrips/vgmplay`
 5. After Done Cloning, do `cd vgmplay/VGMPlay`
 6. And then do `make`
+
+
+
+Does this project make use of code from other open source emulators?
+
+eg https://github.com/libretro/blastem
+
+
