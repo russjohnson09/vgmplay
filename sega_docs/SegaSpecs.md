@@ -26,3 +26,15 @@ The main melody can still be heard without the YM2612.
 
 
 Used chips:     SEGA PSG, YM2612
+
+
+
+# Stereo Sound
+https://www.reddit.com/r/SEGAGENESIS/comments/dayifd/what_games_specifically_benefit_from_stereo_sound/
+
+Sonic The Hedgehog rings alternate left and right. The music of green hill zone you can definitely hear
+the stereo sound as well.
+
+I've heard that it is psuedo-stereo that needs to alternate between left and right. For me, I don't
+think I can hear the difference between that and true stereo.
+
