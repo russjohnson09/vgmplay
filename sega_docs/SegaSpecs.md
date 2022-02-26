@@ -9,3 +9,11 @@ https://en.wikipedia.org/wiki/Yamaha_YM2612
 
 
 https://en.wikipedia.org/wiki/Texas_Instruments_SN76489
+
+
+
+# SN76489
+
+Digital Complex Sound Generator
+
+https://www.youtube.com/watch?v=gkgWgLmYFnE
