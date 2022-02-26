@@ -243,9 +243,10 @@ EMUOBJS = \
 	$(EMUOBJ)/sn76496_opl.o \
 	$(EMUOBJ)/ym2413hd.o \
 	$(EMUOBJ)/ym2413_opl.o
-VGMPLAY_OBJS = \
+ VGMPLAY_OBJS = \
 	$(OBJ)/VGMPlayUI.o
 
+# VGMPLAY_OBJS = ""
 ifeq ($(USE_DBUS), 1)
 	VGMPLAY_OBJS += $(OBJ)/dbus.o
 else ifeq ($(WINDOWS), 1)
