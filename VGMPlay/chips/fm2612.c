@@ -2230,3 +2230,503 @@ static void init_tables(void)
 
 #endif /* BUILD_OPN */
 
+#if (BUILD_YM2612||BUILD_YM3438)
+/*******************************************************************************/
+/*      YM2612 local section                                                   */
+/*******************************************************************************/
+
+/* Generate samples for one of the YM2612s */
+void ym2612_update_one(void *chip, FMSAMPLE **buffer, int length)
+{
+	YM2612 *F2612 = (YM2612 *)chip;
+	FM_OPN *OPN   = &F2612->OPN;
+	INT32 *out_fm = OPN->out_fm;
+	int i;
+	FMSAMPLE  *bufL,*bufR;
+	INT32 dacout;
+	FM_CH	*cch[6];
+	int lt,rt;
+
+	/* set bufer */
+	bufL = buffer[0];
+	bufR = buffer[1];
+
+	cch[0]   = &F2612->CH[0];
+	cch[1]   = &F2612->CH[1];
+	cch[2]   = &F2612->CH[2];
+	cch[3]   = &F2612->CH[3];
+	cch[4]   = &F2612->CH[4];
+	cch[5]   = &F2612->CH[5];
+	
+	if (! F2612->MuteDAC)
+		dacout = F2612->dacout;
+	else
+		dacout = 0;
+
+	/* refresh PG and EG */
+	refresh_fc_eg_chan( OPN, cch[0] );
+	refresh_fc_eg_chan( OPN, cch[1] );
+	if( (OPN->ST.mode & 0xc0) )
+	{
+		/* 3SLOT MODE */
+		if( cch[2]->SLOT[SLOT1].Incr==-1)
+		{
+			refresh_fc_eg_slot(OPN, &cch[2]->SLOT[SLOT1] , OPN->SL3.fc[1] , OPN->SL3.kcode[1] );
+			refresh_fc_eg_slot(OPN, &cch[2]->SLOT[SLOT2] , OPN->SL3.fc[2] , OPN->SL3.kcode[2] );
+			refresh_fc_eg_slot(OPN, &cch[2]->SLOT[SLOT3] , OPN->SL3.fc[0] , OPN->SL3.kcode[0] );
+			refresh_fc_eg_slot(OPN, &cch[2]->SLOT[SLOT4] , cch[2]->fc , cch[2]->kcode );
+		}
+	}else refresh_fc_eg_chan( OPN, cch[2] );
+	refresh_fc_eg_chan( OPN, cch[3] );
+	refresh_fc_eg_chan( OPN, cch[4] );
+	refresh_fc_eg_chan( OPN, cch[5] );
+	if (! length)
+	{
+		update_ssg_eg_channel(&cch[0]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[1]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[2]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[3]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[4]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[5]->SLOT[SLOT1]);
+	}
+
+
+	/* buffering */
+	for(i=0; i < length ; i++)
+	{
+		/* clear outputs */
+		out_fm[0] = 0;
+		out_fm[1] = 0;
+		out_fm[2] = 0;
+		out_fm[3] = 0;
+		out_fm[4] = 0;
+		out_fm[5] = 0;
+
+		/* update SSG-EG output */
+		update_ssg_eg_channel(&cch[0]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[1]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[2]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[3]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[4]->SLOT[SLOT1]);
+		update_ssg_eg_channel(&cch[5]->SLOT[SLOT1]);
+
+		/* calculate FM */
+		if (! F2612->dac_test)
+		{
+			chan_calc(F2612, OPN, cch[0]);
+			chan_calc(F2612, OPN, cch[1]);
+			chan_calc(F2612, OPN, cch[2]);
+			chan_calc(F2612, OPN, cch[3]);
+			chan_calc(F2612, OPN, cch[4]);
+			if( F2612->dacen )
+				*cch[5]->connect4 += dacout;
+			else
+				chan_calc(F2612, OPN, cch[5]);
+		}
+		else
+		{
+			out_fm[0] = out_fm[1] = dacout;
+			out_fm[2] = out_fm[3] = dacout;
+			out_fm[5] = dacout;
+		}
+
+		/* advance LFO */
+		advance_lfo(OPN);
+
+		/* advance envelope generator */
+		OPN->eg_timer += OPN->eg_timer_add;
+		while (OPN->eg_timer >= OPN->eg_timer_overflow)
+		{
+			OPN->eg_timer -= OPN->eg_timer_overflow;
+			OPN->eg_cnt++;
+
+			advance_eg_channel(OPN, &cch[0]->SLOT[SLOT1]);
+			advance_eg_channel(OPN, &cch[1]->SLOT[SLOT1]);
+			advance_eg_channel(OPN, &cch[2]->SLOT[SLOT1]);
+			advance_eg_channel(OPN, &cch[3]->SLOT[SLOT1]);
+			advance_eg_channel(OPN, &cch[4]->SLOT[SLOT1]);
+			advance_eg_channel(OPN, &cch[5]->SLOT[SLOT1]);
+		}
+
+		/*fprintf(hFile, "%u", FileSample, out_fm[0]);
+		for (lt = 0; lt < 6; lt ++)
+			fprintf(hFile, "\t%d", out_fm[lt]);
+		fprintf(hFile, "\n");
+		FileSample ++;*/
+		
+		if (out_fm[0] > 8192) out_fm[0] = 8192;
+		else if (out_fm[0] < -8192) out_fm[0] = -8192;
+		if (out_fm[1] > 8192) out_fm[1] = 8192;
+		else if (out_fm[1] < -8192) out_fm[1] = -8192;
+		if (out_fm[2] > 8192) out_fm[2] = 8192;
+		else if (out_fm[2] < -8192) out_fm[2] = -8192;
+		if (out_fm[3] > 8192) out_fm[3] = 8192;
+		else if (out_fm[3] < -8192) out_fm[3] = -8192;
+		if (out_fm[4] > 8192) out_fm[4] = 8192;
+		else if (out_fm[4] < -8192) out_fm[4] = -8192;
+		if (out_fm[5] > 8192) out_fm[5] = 8192;
+		else if (out_fm[5] < -8192) out_fm[5] = -8192;
+
+		/* 6-channels mixing  */
+		lt  = ((out_fm[0]>>0) & OPN->pan[0]);
+		rt  = ((out_fm[0]>>0) & OPN->pan[1]);
+		lt += ((out_fm[1]>>0) & OPN->pan[2]);
+		rt += ((out_fm[1]>>0) & OPN->pan[3]);
+		lt += ((out_fm[2]>>0) & OPN->pan[4]);
+		rt += ((out_fm[2]>>0) & OPN->pan[5]);
+		lt += ((out_fm[3]>>0) & OPN->pan[6]);
+		rt += ((out_fm[3]>>0) & OPN->pan[7]);
+		if (! F2612->dac_test)
+		{
+			lt += ((out_fm[4]>>0) & OPN->pan[8]);
+			rt += ((out_fm[4]>>0) & OPN->pan[9]);
+		}
+		else
+		{
+			lt += dacout;
+			lt += dacout;
+		}
+		lt += ((out_fm[5]>>0) & OPN->pan[10]);
+		rt += ((out_fm[5]>>0) & OPN->pan[11]);
+
+//      Limit( lt, MAXOUT, MINOUT );
+//      Limit( rt, MAXOUT, MINOUT );
+
+		#ifdef SAVE_SAMPLE
+			SAVE_ALL_CHANNELS
+		#endif
+
+		/* buffering */
+		if (F2612->WaveOutMode & 0x01)
+			F2612->WaveL = lt;
+		if (F2612->WaveOutMode & 0x02)
+			F2612->WaveR = rt;
+		if (F2612->WaveOutMode ^ 0x03)
+			F2612->WaveOutMode ^= 0x03;
+		bufL[i] = F2612->WaveL;
+		bufR[i] = F2612->WaveR;
+
+		/* CSM mode: if CSM Key ON has occured, CSM Key OFF need to be sent       */
+		/* only if Timer A does not overflow again (i.e CSM Key ON not set again) */
+		OPN->SL3.key_csm <<= 1;
+
+		/* timer A control */
+		//INTERNAL_TIMER_A( &OPN->ST , cch[2] )
+		{
+			if( OPN->ST.TAC &&  (OPN->ST.timer_handler==0) )
+				if( (OPN->ST.TAC -= (int)(OPN->ST.freqbase*4096)) <= 0 )
+				{
+					TimerAOver( &OPN->ST );
+					// CSM mode total level latch and auto key on
+					if( OPN->ST.mode & 0x80 )
+						CSMKeyControll( OPN, cch[2] );
+				}
+		}
+
+		/* CSM Mode Key ON still disabled */
+		if (OPN->SL3.key_csm & 2)
+		{
+			/* CSM Mode Key OFF (verified by Nemesis on real hardware) */
+			FM_KEYOFF_CSM(cch[2],SLOT1);
+			FM_KEYOFF_CSM(cch[2],SLOT2);
+			FM_KEYOFF_CSM(cch[2],SLOT3);
+			FM_KEYOFF_CSM(cch[2],SLOT4);
+			OPN->SL3.key_csm = 0;
+		}
+	}
+
+	/* timer B control */
+//	INTERNAL_TIMER_B(&OPN->ST,length)
+}
+
+#ifdef __STATE_H__
+void ym2612_postload(void *chip)
+{
+	if (chip)
+	{
+		YM2612 *F2612 = (YM2612 *)chip;
+		int r;
+
+		/* DAC data & port */
+		F2612->dacout = ((int)F2612->REGS[0x2a] - 0x80) << 6;	/* level unknown */
+		F2612->dacen  = F2612->REGS[0x2d] & 0x80;
+		/* OPN registers */
+		/* DT / MULTI , TL , KS / AR , AMON / DR , SR , SL / RR , SSG-EG */
+		for(r=0x30;r<0x9e;r++)
+			if((r&3) != 3)
+			{
+				OPNWriteReg(&F2612->OPN,r,F2612->REGS[r]);
+				OPNWriteReg(&F2612->OPN,r|0x100,F2612->REGS[r|0x100]);
+			}
+		/* FB / CONNECT , L / R / AMS / PMS */
+		for(r=0xb0;r<0xb6;r++)
+			if((r&3) != 3)
+			{
+				OPNWriteReg(&F2612->OPN,r,F2612->REGS[r]);
+				OPNWriteReg(&F2612->OPN,r|0x100,F2612->REGS[r|0x100]);
+			}
+		/* channels */
+		/*FM_channel_postload(F2612->CH,6);*/
+	}
+}
+
+static void YM2612_save_state(YM2612 *F2612, running_device *device)
+{
+	state_save_register_device_item_array(device, 0, F2612->REGS);
+	FMsave_state_st(device,&F2612->OPN.ST);
+	FMsave_state_channel(device,F2612->CH,6);
+	/* 3slots */
+	state_save_register_device_item_array(device, 0, F2612->OPN.SL3.fc);
+	state_save_register_device_item(device, 0, F2612->OPN.SL3.fn_h);
+	state_save_register_device_item_array(device, 0, F2612->OPN.SL3.kcode);
+	/* address register1 */
+	state_save_register_device_item(device, 0, F2612->addr_A1);
+}
+#endif /* _STATE_H */
+
+/* initialize YM2612 emulator(s) */
+//void * ym2612_init(void *param, running_device *device, int clock, int rate,
+//               FM_TIMERHANDLER timer_handler,FM_IRQHANDLER IRQHandler)
+void * ym2612_init(void *param, int clock, int rate,
+               FM_TIMERHANDLER timer_handler,FM_IRQHANDLER IRQHandler)
+{
+	YM2612 *F2612;
+
+	/* allocate extend state space */
+	//F2612 = auto_alloc_clear(device->machine, YM2612);
+	F2612 = (YM2612 *)malloc(sizeof(YM2612));
+	if (F2612 == NULL)
+		return NULL;
+	memset(F2612, 0x00, sizeof(YM2612));
+	/* allocate total level table (128kb space) */
+	init_tables();
+
+	F2612->OPN.ST.param = param;
+	F2612->OPN.type = TYPE_YM2612;
+	F2612->OPN.P_CH = F2612->CH;
+	//F2612->OPN.ST.device = device;
+	F2612->OPN.ST.clock = clock;
+	F2612->OPN.ST.rate = rate;
+	/* F2612->OPN.ST.irq = 0; */
+	/* F2612->OPN.ST.status = 0; */
+	/* Extend handler */
+	F2612->OPN.ST.timer_handler = timer_handler;
+	F2612->OPN.ST.IRQ_Handler   = IRQHandler;
+	
+	if (PseudoSt)
+		F2612->WaveOutMode = 0x01;
+	else
+		F2612->WaveOutMode = 0x03;
+	/*hFile = fopen("YM2612.log", "wt");
+	fprintf(hFile, "Clock: %d, Sample Rate: %d\n", clock, rate);
+	fprintf(hFile, "Sample\tCh 0\tCh 1\tCh 2\tCh 3\tCh 4\tCh 5\n");
+	FileSample = 0;*/
+
+#ifdef __STATE_H__
+	YM2612_save_state(F2612, device);
+#endif
+	return F2612;
+}
+
+/* shut down emulator */
+void ym2612_shutdown(void *chip)
+{
+	YM2612 *F2612 = (YM2612 *)chip;
+	//fclose(hFile);
+
+	FMCloseTable();
+	//auto_free(F2612->OPN.ST.device->machine, F2612);
+	free(F2612);
+}
+
+/* reset one of chip */
+void ym2612_reset_chip(void *chip)
+{
+	int i;
+	YM2612 *F2612 = (YM2612 *)chip;
+	FM_OPN *OPN   = &F2612->OPN;
+
+	OPNSetPres( OPN, 6*24, 6*24, 0);
+	/* status clear */
+	FM_IRQMASK_SET(&OPN->ST,0x03);
+	FM_BUSY_CLEAR(&OPN->ST);
+	//OPNWriteMode(OPN,0x27,0x30); /* mode 0 , timer reset */
+
+	OPN->eg_timer = 0;
+	OPN->eg_cnt   = 0;
+
+	OPN->lfo_timer = 0;
+	OPN->lfo_cnt   = 0;
+	OPN->LFO_AM    = 126;
+	OPN->LFO_PM    = 0;
+
+	OPN->ST.TAC    = 0;
+	OPN->ST.TBC    = 0;
+
+	OPN->SL3.key_csm = 0;
+
+	OPN->ST.status = 0;
+	OPN->ST.mode = 0;
+
+	memset(F2612->REGS, 0x00, sizeof(UINT8) * 512);
+	
+	OPNWriteMode(OPN,0x22,0x00);
+	
+	OPNWriteMode(OPN,0x27,0x30);
+	OPNWriteMode(OPN,0x26,0x00);
+	OPNWriteMode(OPN,0x25,0x00);
+	OPNWriteMode(OPN,0x24,0x00);
+
+	reset_channels( &OPN->ST , &F2612->CH[0] , 6 );
+
+	for(i = 0xb6 ; i >= 0xb4 ; i-- )
+	{
+		OPNWriteReg(OPN,i      ,0xc0);
+		OPNWriteReg(OPN,i|0x100,0xc0);
+	}
+	for(i = 0xb2 ; i >= 0x30 ; i-- )
+	{
+		OPNWriteReg(OPN,i      ,0);
+		OPNWriteReg(OPN,i|0x100,0);
+	}
+
+	/* DAC mode clear */
+	F2612->dacen = 0;
+	F2612->dac_test = 0;
+	F2612->dacout = 0;
+	
+	if (F2612->WaveOutMode == 0x02)
+		F2612->WaveOutMode >>= 1;
+}
+
+/* YM2612 write */
+/* n = number  */
+/* a = address */
+/* v = value   */
+int ym2612_write(void *chip, int a, UINT8 v)
+{
+	YM2612 *F2612 = (YM2612 *)chip;
+	int addr;
+
+	v &= 0xff;	/* adjust to 8 bit bus */
+
+	switch( a&3)
+	{
+	case 0:	/* address port 0 */
+		F2612->OPN.ST.address = v;
+		F2612->addr_A1 = 0;
+		break;
+
+	case 1:	/* data port 0    */
+		if (F2612->addr_A1 != 0)
+			break;	/* verified on real YM2608 */
+
+		addr = F2612->OPN.ST.address;
+		F2612->REGS[addr] = v;
+		switch( addr & 0xf0 )
+		{
+		case 0x20:	/* 0x20-0x2f Mode */
+			switch( addr )
+			{
+			case 0x2a:	/* DAC data (YM2612) */
+				ym2612_update_req(F2612->OPN.ST.param);
+				F2612->dacout = ((int)v - 0x80) << 6;	/* level unknown */
+				break;
+			case 0x2b:	/* DAC Sel  (YM2612) */
+				/* b7 = dac enable */
+				F2612->dacen = v & 0x80;
+				break;
+			case 0x2C:	// undocumented: DAC Test Reg
+				// b5 = volume enable
+				F2612->dac_test = v & 0x20;
+				break;
+			default:	/* OPN section */
+				ym2612_update_req(F2612->OPN.ST.param);
+				/* write register */
+				OPNWriteMode(&(F2612->OPN),addr,v);
+			}
+			break;
+		default:	/* 0x30-0xff OPN section */
+			ym2612_update_req(F2612->OPN.ST.param);
+			/* write register */
+			OPNWriteReg(&(F2612->OPN),addr,v);
+		}
+		break;
+
+	case 2:	/* address port 1 */
+		F2612->OPN.ST.address = v;
+		F2612->addr_A1 = 1;
+		break;
+
+	case 3:	/* data port 1    */
+		if (F2612->addr_A1 != 1)
+			break;	/* verified on real YM2608 */
+
+		addr = F2612->OPN.ST.address;
+		F2612->REGS[addr | 0x100] = v;
+		ym2612_update_req(F2612->OPN.ST.param);
+		OPNWriteReg(&(F2612->OPN),addr | 0x100,v);
+		break;
+	}
+	return F2612->OPN.ST.irq;
+}
+
+UINT8 ym2612_read(void *chip,int a)
+{
+	YM2612 *F2612 = (YM2612 *)chip;
+
+	switch( a&3)
+	{
+	case 0:	/* status 0 */
+		return FM_STATUS_FLAG(&F2612->OPN.ST);
+	case 1:
+	case 2:
+	case 3:
+		//LOG(LOG_WAR,("YM2612 #%p:A=%d read unmapped area\n",F2612->OPN.ST.param,a));
+		return FM_STATUS_FLAG(&F2612->OPN.ST);
+	}
+	return 0;
+}
+
+int ym2612_timer_over(void *chip,int c)
+{
+	YM2612 *F2612 = (YM2612 *)chip;
+
+	if( c )
+	{	/* Timer B */
+		TimerBOver( &(F2612->OPN.ST) );
+	}
+	else
+	{	/* Timer A */
+		ym2612_update_req(F2612->OPN.ST.param);
+		/* timer update */
+		TimerAOver( &(F2612->OPN.ST) );
+		/* CSM mode key,TL controll */
+		if ((F2612->OPN.ST.mode & 0xc0) == 0x80)
+		{	/* CSM mode total level latch and auto key on */
+			CSMKeyControll( &F2612->OPN, &(F2612->CH[2]) );
+		}
+	}
+	return F2612->OPN.ST.irq;
+}
+
+
+void ym2612_set_mutemask(void *chip, UINT32 MuteMask)
+{
+	YM2612 *F2612 = (YM2612 *)chip;
+	UINT8 CurChn;
+	
+	for (CurChn = 0; CurChn < 6; CurChn ++)
+		F2612->CH[CurChn].Muted = (MuteMask >> CurChn) & 0x01;
+	F2612->MuteDAC = (MuteMask >> 6) & 0x01;
+	
+	return;
+}
+
+void ym2612_setoptions(UINT8 Flags)
+{
+	PseudoSt = (Flags >> 2) & 0x01;
+	
+	return;
+}
+#endif /* (BUILD_YM2612||BUILD_YM3238) */

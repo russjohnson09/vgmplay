@@ -2,7 +2,7 @@
 
 #include "sn764intf.h"
 #include "2413intf.h"
-// #include "2612intf.h"
+#include "2612intf.h"
 #include "2151intf.h"
 #include "segapcm.h"
 #include "rf5c68.h"

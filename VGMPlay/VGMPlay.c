@@ -2716,6 +2716,27 @@ static void Chips_GeneralActions(UINT8 Mode)
 				}
 			}
 		}
+		if (VGMHead.lngHzYM2612)
+		{
+			//ChipVol = 0x100;
+			ym2612_set_emu_core(ChipOpts[0x00].YM2612.EmuCore);
+			ym2612_set_options((UINT8)ChipOpts[0x00].YM2612.SpecialFlags);
+			ChipOpts[0x01].YM2612.EmuCore = ChipOpts[0x00].YM2612.EmuCore;
+			ChipOpts[0x01].YM2612.SpecialFlags = ChipOpts[0x00].YM2612.SpecialFlags;
+			ChipCnt = (VGMHead.lngHzYM2612 & 0x40000000) ? 0x02 : 0x01;
+			for (CurChip = 0x00; CurChip < ChipCnt; CurChip ++)
+			{
+				CAA = &ChipAudio[CurChip].YM2612;
+				CAA->ChipType = 0x02;
+				
+				ChipClk = GetChipClock(&VGMHead, (CurChip << 7) | CAA->ChipType, NULL);
+				CAA->SmpRate = device_start_ym2612(CurChip, ChipClk);
+				CAA->StreamUpdate = &ym2612_stream_update;
+				
+				CAA->Volume = GetChipVolume(&VGMHead, CAA->ChipType, CurChip, ChipCnt);
+				AbsVol += CAA->Volume;
+			}
+		}
 		if (VGMHead.lngHzYM2151)
 		{
 			//ChipVol = 0x100;
@@ -3576,6 +3597,8 @@ static void Chips_GeneralActions(UINT8 Mode)
 				device_reset_sn764xx(CurCSet);
 			else if (CAA->ChipType == 0x01 && ! UseFM)
 				device_reset_ym2413(CurCSet);
+			else if (CAA->ChipType == 0x02)
+				device_reset_ym2612(CurCSet);
 			else if (CAA->ChipType == 0x03)
 				device_reset_ym2151(CurCSet);
 			else if (CAA->ChipType == 0x04)
@@ -3711,6 +3734,8 @@ static void Chips_GeneralActions(UINT8 Mode)
 				device_stop_sn764xx(CurCSet);
 			else if (CAA->ChipType == 0x01 && ! UseFM)
 				device_stop_ym2413(CurCSet);
+			else if (CAA->ChipType == 0x02)
+				device_stop_ym2612(CurCSet);
 			else if (CAA->ChipType == 0x03)
 				device_stop_ym2151(CurCSet);
 			else if (CAA->ChipType == 0x04)
@@ -3823,6 +3848,8 @@ static void Chips_GeneralActions(UINT8 Mode)
 				sn764xx_set_mute_mask(CurCSet, ChipOpts[CurCSet].SN76496.ChnMute1);
 			else if (CAA->ChipType == 0x01 && ! UseFM)
 				ym2413_set_mute_mask(CurCSet, ChipOpts[CurCSet].YM2413.ChnMute1);
+			else if (CAA->ChipType == 0x02)
+				ym2612_set_mute_mask(CurCSet, ChipOpts[CurCSet].YM2612.ChnMute1);
 			else if (CAA->ChipType == 0x03)
 				ym2151_set_mute_mask(CurCSet, ChipOpts[CurCSet].YM2151.ChnMute1);
 			else if (CAA->ChipType == 0x04)
