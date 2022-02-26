@@ -558,10 +558,6 @@ void chip_reg_write(UINT8 ChipType, UINT8 ChipID,
 			ym2413_w(ChipID, 0x00, Offset);
 			ym2413_w(ChipID, 0x01, Data);
 			break;
-		case 0x02:	// YM2612
-			ym2612_w(ChipID, (Port << 1) | 0x00, Offset);
-			ym2612_w(ChipID, (Port << 1) | 0x01, Data);
-			break;
 		case 0x03:	// YM2151
 			ym2151_w(ChipID, 0x00, Offset);
 			ym2151_w(ChipID, 0x01, Data);

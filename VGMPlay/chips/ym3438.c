@@ -984,38 +984,6 @@ void OPN2_ChOutput(ym3438_t *chip)
     chip->mol = 0;
     chip->mor = 0;
 
-    if (chip_type == ym3438_type_ym2612)
-    {
-        out_en = ((cycles & 3) == 3) || test_dac;
-        /* YM2612 DAC emulation(not verified) */
-        sign = out >> 8;
-        if (out >= 0)
-        {
-            out++;
-            sign++;
-        }
-        if (chip->ch_lock_l && out_en)
-        {
-            chip->mol = out;
-        }
-        else
-        {
-            chip->mol = sign;
-        }
-        if (chip->ch_lock_r && out_en)
-        {
-            chip->mor = out;
-        }
-        else
-        {
-            chip->mor = sign;
-        }
-        /* Amplify signal */
-        chip->mol *= 3;
-        chip->mor *= 3;
-    }
-    else
-    {
         out_en = ((cycles & 3) != 0) || test_dac;
         /* Discrete YM3438 seems has the ladder effect too */
         if (out >= 0 && chip_type == ym3438_type_discrete)
@@ -1030,7 +998,6 @@ void OPN2_ChOutput(ym3438_t *chip)
         {
             chip->mor = out;
         }
-    }
 }
 
 void OPN2_FMGenerate(ym3438_t *chip)
@@ -1219,10 +1186,6 @@ void OPN2_Reset(ym3438_t *chip, Bit32u rate, Bit32u clock)
 void OPN2_SetChipType(Bit32u type)
 {
     use_filter = 0;
-    if(type == ym3438_type_ym2612)
-        use_filter = 1;
-    if(type == ym3438_type_ym2612_u)
-        type = ym3438_type_ym2612;
     chip_type = type;
 }
 
@@ -1561,18 +1524,11 @@ void OPN2_SetOptions(Bit8u flags)
 {
     switch ((flags >> 3) & 0x03)
     {
-    case 0x00: // YM2612
-    default:
-        OPN2_SetChipType(ym3438_type_ym2612);
-        break;
     case 0x01: // ASIC YM3438
         OPN2_SetChipType(ym3438_type_asic);
         break;
     case 0x02: // Discrete YM3438
         OPN2_SetChipType(ym3438_type_discrete);
-        break;
-    case 0x03: // YM2612 without filter emulation
-        OPN2_SetChipType(ym3438_type_ym2612_u);
         break;
     }
 }

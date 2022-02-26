@@ -168,6 +168,9 @@ ifeq ($(DISABLE_HWOPL_SUPPORT), 0)
 MAINOBJS += $(OBJ)/pt_ioctl.o
 endif
 endif
+# $(EMUOBJ)/2612intf.o
+# 	$(EMUOBJ)/ym2612.o
+
 EMUOBJS = \
 	$(EMUOBJ)/262intf.o \
 	$(EMUOBJ)/2151intf.o \
@@ -175,7 +178,6 @@ EMUOBJS = \
 	$(EMUOBJ)/2413intf.o \
 	$(EMUOBJ)/2608intf.o \
 	$(EMUOBJ)/2610intf.o \
-	$(EMUOBJ)/2612intf.o \
 	$(EMUOBJ)/3526intf.o \
 	$(EMUOBJ)/3812intf.o \
 	$(EMUOBJ)/8950intf.o \
@@ -232,7 +234,6 @@ EMUOBJS = \
 	$(EMUOBJ)/x1_010.o \
 	$(EMUOBJ)/ym2151.o \
 	$(EMUOBJ)/ym2413.o \
-	$(EMUOBJ)/ym2612.o \
 	$(EMUOBJ)/ym3438.o \
 	$(EMUOBJ)/ymdeltat.o \
 	$(EMUOBJ)/ymf262.o \
