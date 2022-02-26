@@ -259,6 +259,7 @@ static void signal_handler(int signal)
 }
 #endif
 
+// make WINDOWS=1 && ./vgmplay.exe 
 int main(int argc, char* argv[])
 {
 	int argbase;
@@ -270,11 +271,6 @@ int main(int argc, char* argv[])
 	UINT8 CurPath;
 	UINT32 ChrPos;
 	char* DispFileName;
-
-	
-	
-	printf(APP_NAME);
-	printf("\n-----123-----\n");
 	
 	VGMPlay_Init();
 	
@@ -284,27 +280,15 @@ int main(int argc, char* argv[])
 	
 	// Path 2: exe's directory
 	AppName = GetAppFileName();	// "C:\VGMPlay\VGMPlay.exe"
-	// Note: GetAppFileName always returns native directory separators.
-	StrPtr = strrchr(AppName, DIR_CHR);
-	if (StrPtr != NULL)
-	{
-		ChrPos = StrPtr + 1 - AppName;
-		strncpy(AppPathPtr, AppName, ChrPos);
-		AppPathPtr[ChrPos] = 0x00;	// "C:\VGMPlay\"
-		AppPaths[CurPath] = AppPathPtr;
-		CurPath ++;
-		AppPathPtr += ChrPos + 1;
-	}
 	
 	// Path 4: working directory ("\0")
 	AppPathPtr[0] = '\0';
 	AppPaths[CurPath] = AppPathPtr;
 	CurPath ++;
 
-		printf(AppName);
-		printf("\n");
+	// skip reading ini
+	// ReadOptions(AppName);
 
-	ReadOptions(AppName);
 	VGMPlay_Init2();
 
 	MultimediaKeyHook_Init();
@@ -312,140 +296,17 @@ int main(int argc, char* argv[])
 	
 	ErrRet = 0;
 	argbase = 0x01;
-
-			printf(AppName);
-		printf("\n");
 	
 	printf("\nFile Name:\t");
-	if (argc <= argbase)
-	{
-#ifdef WIN32
-		INT32 OldCP;
-		
-		OldCP = GetConsoleCP();
-		
-		// Set the Console Input Codepage to ANSI.
-		// The Output Codepage must be left at OEM, else the displayed characters are wrong.
-		ChrPos = GetACP();
-		ErrRet = SetConsoleCP(ChrPos);			// set input codepage
-		//ErrRet = SetConsoleOutputCP(ChrPos);	// set output codepage (would be a bad idea)
-		
-		StrPtr = fgets(VgmFileName, MAX_PATH, stdin);
-		if (StrPtr == NULL)
-			VgmFileName[0] = '\0';
-		
-		// Playing with the console font resets the Console Codepage to OEM, so I have to
-		// convert the file name in this case.
-		if (GetConsoleCP() == GetOEMCP())
-			OemToChar(VgmFileName, VgmFileName);	// OEM -> ANSI conversion
-		
-		// This fixes the display of non-ANSI characters.
-		ErrRet = SetConsoleCP(OldCP);
-		
-		// This codepage stuff drives me insane.
-		// Debug and Release build behave differently - WHAT??
-		//
-		// There a list of behaviours.
-		// Debug and Release were tested by dropping a file on it and via Visual Studio.
-		//
-		// Input CP 850, Output CP 850
-		//	Debug build:	Dynamite D³x
-		//	Release build:	Dynamite Düx
-		// Input CP 1252, Output CP 850
-		//	Debug build:	Dynamite D³x
-		//	Release build:	Dynamite D³x
-		// Input CP 850, Output CP 1252
-		//	Debug build:	Dynamite D³x [tag display wrong]
-		//	Release build:	Dynamite Düx [tag display wrong]
-		// Input CP 1252, Output CP 1252
-		//	Debug build:	Dynamite D³x [tag display wrong]
-		//	Release build:	Dynamite D³x [tag display wrong]
-#else
-		fflush(stdout);
-		while(1)
-		{
-			fd_set fds;
-			FD_ZERO(&fds);
-			FD_SET(fileno(stdin), &fds);
-			struct timeval tv = {0, 10};
-			int sel_ret = select(1, &fds, NULL, NULL, &tv);
-			if(sel_ret == -1)
-				break;
-			else if(!sel_ret)
-			{
-				DBus_ReadWriteDispatch();
-				// If ^C has been pressed, quit immediately
-				if(sigint)
-				{
-					printf("\n");
-					break;
-				}
-			}
-			else
-			{
-				StrPtr = fgets(VgmFileName, MAX_PATH, stdin);
-				break;
-			}
-		}
-		if (StrPtr == NULL)
-			VgmFileName[0] = '\0';
-#endif
-		
-		RemoveNewLines(VgmFileName);
-		RemoveQuotationMarks(VgmFileName);
-	}
-	else
-	{
-		// The argument should already use the ANSI codepage.
-		strcpy(VgmFileName, argv[argbase]);
-		DispFileName = GetLastDirSeparator(VgmFileName);
-		if(DispFileName && strlen(DispFileName) > 2)
-			DispFileName++;
-		else
-			DispFileName = VgmFileName;
-		printf("%s\n", DispFileName);
-	}
+	strcpy(VgmFileName, "../music/megadrive/01 - [Prologue].vgm");
+	DispFileName = VgmFileName;
+
+	printf("%s\n", DispFileName);
+
 	if (! strlen(VgmFileName))
 		goto ExitProgram;
 	StandardizeDirSeparators(VgmFileName);
-	
-#if defined(XMAS_EXTRA) || defined(WS_DEMO)
-	XMasEnable = XMas_Extra(VgmFileName, 0x00);
-#endif
-	
-#if 0
-	{	// Print hex characters of file name (for vgm-player script debugging)
-		const char* CurChr;
-		
-#ifdef WIN32
-		printf("Input CP: %d, Output CP: %d\n", GetConsoleCP(), GetConsoleOutputCP());
-#endif
-		printf("VgmFileName: ");
-		
-		CurChr = VgmFileName;
-		while(*CurChr != '\0')
-		{
-			printf("%02X ", (UINT8)*CurChr);
-			CurChr ++;
-		}
-		printf("%02X\n", (UINT8)*CurChr);
-		_getch();
-	}
-#endif
-#if 0
-	{	// strip spaces and \n (fixed bugs with vgm-player script with un-7z)
-		char* CurChr;
-		
-		// trim \n and spaces off
-		CurChr = strchr(VgmFileName, '\n');
-		if (CurChr != NULL)
-			*CurChr = '\0';
-		CurChr = VgmFileName + strlen(VgmFileName) - 1;
-		while(CurChr > VgmFileName && *CurChr == ' ')
-			*(CurChr --) = '\0';
-	}
-#endif
-	
+
 	FirstInit = true;
 	StreamStarted = false;
 	FileExt = GetFileExtension(VgmFileName);
@@ -453,6 +314,12 @@ int main(int argc, char* argv[])
 		PLMode = 0x00;
 	else
 		PLMode = 0x01;
+
+	printf("\nplmode");
+	printf("PLMode");
+	printf("%d", PLMode);
+
+	printf("\nplmode");
 
 	lastMMEvent = 0x00;
 	if (! PLMode)
