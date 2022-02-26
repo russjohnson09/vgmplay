@@ -264,74 +264,23 @@ int main(int argc, char* argv[])
 	int argbase;
 	int ErrRet;
 	char* AppName;
-#if defined(XMAS_EXTRA) || defined(WS_DEMO)
-	bool XMasEnable;
-#endif
 	char* AppPathPtr;
 	const char* StrPtr;
 	const char* FileExt;
 	UINT8 CurPath;
 	UINT32 ChrPos;
 	char* DispFileName;
+
 	
-	// set locale to "current system locale"
-	// (makes Unicode characters (like umlauts) work under Linux and fixes some
-	//  Unicode -> ANSI conversions)
-	setlocale(LC_CTYPE, "");
-	
-#ifndef WIN32
-	tcgetattr(STDIN_FILENO, &oldterm);
-	termmode = false;
-	signal(SIGINT, signal_handler);
-#else
-	SetConsoleCtrlHandler(signal_handler, TRUE);
-#endif
-	
-	if (argc > 1)
-	{
-		if (! stricmp_u(argv[1], "-v") || ! stricmp_u(argv[1], "--version"))
-		{
-			printf("VGMPlay %s"
-#if defined(APLHA)
-					" alpha"
-#elif defined(BETA)
-					" beta"
-#endif
-					", supports VGM %s\n", VGMPLAY_VER_STR, VGM_VER_STR);
-			return 0;
-		}
-	}
-	
-#ifdef SET_CONSOLE_TITLE
-#ifdef WIN32
-	SetConsoleTitle(APP_NAME);			// Set Windows Console Title
-#else
-	printf("\x1B]0;%s\x07", APP_NAME);	// Set xterm/rxvt Terminal Title
-#endif
-#endif
 	
 	printf(APP_NAME);
-#ifdef XMAS_EXTRA
-	printf(" - XMas Release");
-#endif
-	printf("\n----------\n");
-	
-	//if (argv[0x00] == NULL)
-	//	printf("Argument \"Application-Name\" is NULL!\n");
-	
-	// Warning! It's dangerous to use Argument 0!
-	// AppName may be "vgmplay" instead of "vgmplay.exe"
+	printf("\n-----123-----\n");
 	
 	VGMPlay_Init();
 	
 	// Note: Paths are checked from last to first.
 	CurPath = 0x00;
 	AppPathPtr = AppPathBuffer;
-#ifndef WIN32
-	// Path 1: global share directory
-	AppPaths[CurPath] = SHARE_PREFIX "/share/vgmplay/";
-	CurPath ++;
-#endif
 	
 	// Path 2: exe's directory
 	AppName = GetAppFileName();	// "C:\VGMPlay\VGMPlay.exe"
@@ -347,42 +296,14 @@ int main(int argc, char* argv[])
 		AppPathPtr += ChrPos + 1;
 	}
 	
-#ifndef WIN32
-	// Path 3: home directory
-	StrPtr = getenv("XDG_CONFIG_HOME");
-	if (StrPtr != NULL && StrPtr[0] == '\0')
-	{
-		strcpy(AppPathPtr, StrPtr);
-	}
-	else
-	{
-		StrPtr = getenv("HOME");
-		if (StrPtr != NULL)
-			strcpy(AppPathPtr, StrPtr);
-		else
-			strcpy(AppPathPtr, "");
-		strcat(AppPathPtr, "/.config");
-	}
-	strcat(AppPathPtr, "/vgmplay/");
-	AppPaths[CurPath] = AppPathPtr;
-	CurPath ++;
-	AppPathPtr += strlen(AppPathPtr) + 1;
-#endif
-	
 	// Path 4: working directory ("\0")
 	AppPathPtr[0] = '\0';
 	AppPaths[CurPath] = AppPathPtr;
 	CurPath ++;
-	
-#if 0	// set to 1 to print all selected search paths
-	CurPath = 0;
-	while(AppPaths[CurPath] != NULL)
-	{
-		printf("Path %u: %s\n", CurPath + 1, AppPaths[CurPath]);
-		CurPath ++;
-	}
-#endif
-	
+
+		printf(AppName);
+		printf("\n");
+
 	ReadOptions(AppName);
 	VGMPlay_Init2();
 
@@ -391,23 +312,9 @@ int main(int argc, char* argv[])
 	
 	ErrRet = 0;
 	argbase = 0x01;
-	while(argbase < argc)
-	{
-		if (! strnicmp_u(argv[argbase], "-LogSound:", 10))
-		{
-			LogToWave = (UINT8)strtoul(argv[argbase] + 10, NULL, 0);
-			argbase ++;
-		}
-		else if (! strnicmp_u(argv[argbase], "-DeviceId:", 10))
-		{
-			OutputDevID = (UINT8)strtoul(argv[argbase] + 10, NULL, 0);
-			argbase ++;
-		}
-		else
-		{
-			break;
-		}
-	}
+
+			printf(AppName);
+		printf("\n");
 	
 	printf("\nFile Name:\t");
 	if (argc <= argbase)
