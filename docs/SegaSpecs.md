@@ -38,3 +38,25 @@ the stereo sound as well.
 I've heard that it is psuedo-stereo that needs to alternate between left and right. For me, I don't
 think I can hear the difference between that and true stereo.
 
+
+
+
+	CAA->SmpP = 0x00;
+	CAA->SmpLast = 0x00;
+	CAA->SmpNext = 0x00;
+	CAA->LSmpl.Left = 0x00;
+	CAA->LSmpl.Right = 0x00;
+
+
+The chip will store the audio it found by interpreting the vgm file.
+
+The ResampleChipStream will get the chip stream and put it into a wav buffer.
+
+
+FillBuffer
+
+InterpretFile
+
+InterpretVGM // fill chip stream
+
+ResampleChipStream // get chip stream to buffer.

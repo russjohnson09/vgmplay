@@ -2707,7 +2707,6 @@ static void InterpretFile(UINT32 SampleCount)
 	
 	while(Interpreting)
 		Sleep(1);
-		printf("InterpretFile 2");
 
 	if (DacCtrlUsed && SampleCount > 1)	// handle skipping
 	{
@@ -2720,10 +2719,6 @@ static void InterpretFile(UINT32 SampleCount)
 	Interpreting = true;
 	if (! FileMode)
 		InterpretVGM(SampleCount);
-#ifdef ADDITIONAL_FORMATS
-	else
-		InterpretOther(SampleCount);
-#endif
 	
 	if (DacCtrlUsed && SampleCount)
 	{
@@ -3261,6 +3256,13 @@ static void ReadPCMTable(UINT32 DataSize, const UINT8* Data)
 }
 
 #define CHIP_CHECK(name)	(ChipAudio[CurChip].name.ChipType != 0xFF)
+
+/**
+ * @brief 
+ *  This can be trimmed down to specific chips, but this is
+ * getting into the actual hardware emulation portion.
+ * @param SampleCount 
+ */
 static void InterpretVGM(UINT32 SampleCount)
 {
 	INT32 SmplPlayed;
@@ -3282,10 +3284,13 @@ static void InterpretVGM(UINT32 SampleCount)
 	if (PausePlay && ! ForceVGMExec)
 		return;
 	
+	// printf("InterpretVGM");
 	SmplPlayed = SamplePbk2VGM_I(VGMSmplPlayed + SampleCount);
 	while(VGMSmplPos <= SmplPlayed)
 	{
 		Command = VGMData[VGMPos + 0x00];
+		// TODO what commands are specific to chips I don't need.
+		// printf("Command:%x\n",Command);
 		if (Command >= 0x70 && Command <= 0x8F)
 		{
 			switch(Command & 0xF0)
@@ -3422,13 +3427,6 @@ static void InterpretVGM(UINT32 SampleCount)
 					
 					if (VGMMaxLoopM && VGMCurLoop >= VGMMaxLoopM)
 					{
-#ifndef CONSOLE_MODE
-						if (! FadePlay)
-						{
-							FadeStart = SampleVGM2Pbk_I(VGMHead.lngTotalSamples +
-															(VGMCurLoop - 1) * VGMHead.lngLoopSamples);
-						}
-#endif
 						FadePlay = true;
 					}
 					if (FadePlay && ! FadeTime)
@@ -3438,11 +3436,6 @@ static void InterpretVGM(UINT32 SampleCount)
 				{
 					if (VGMHead.lngTotalSamples != (UINT32)VGMSmplPos)
 					{
-#ifdef CONSOLE_MODE
-						fprintf(stderr, "Warning! Header Samples: %u\t Counted Samples: %u\n",
-								VGMHead.lngTotalSamples, VGMSmplPos);
-						ErrorHappened = true;
-#endif
 						VGMHead.lngTotalSamples = VGMSmplPos;
 					}
 					
