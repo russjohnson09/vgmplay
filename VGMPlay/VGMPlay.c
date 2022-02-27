@@ -942,8 +942,10 @@ void PlayVGM(void)
 	VGMEnd = false;
 	VGMCurLoop = 0x00;
 	PauseSmpls = (PauseTime * SampleRate + 500) / 1000;
-	if (VGMPos >= VGMHead.lngEOFOffset)
-		VGMEnd = true;
+
+	// Header only file.
+	// if (VGMPos >= VGMHead.lngEOFOffset)
+	// 	VGMEnd = true;
 	
 	Chips_GeneralActions(0x00);	// Start chips
 
@@ -954,7 +956,7 @@ void PlayVGM(void)
 	Last95Max = 0xFFFF;
 	IsVGMInit = true;
 	Interpreting = false;
-	InterpretFile(0);
+	// InterpretFile(0);
 	IsVGMInit = false;
 	
 	PauseThread = false;
