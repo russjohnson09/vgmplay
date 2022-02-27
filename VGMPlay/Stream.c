@@ -240,21 +240,11 @@ UINT8 SoundLogging(UINT8 Mode)
 
 UINT8 StartStream(UINT8 DeviceID)
 {
+	printf("StartStream\n");
 	UINT32 RetVal;
-#ifdef USE_LIBAO
-	ao_sample_format ao_fmt;
-#else
-#ifdef WIN32
 	UINT16 Cnt;
 	HANDLE WaveOutThreadHandle;
 	DWORD WaveOutThreadID;
-	//char TestStr[0x80];
-#elif defined(__NetBSD__)
-	struct audio_info AudioInfo;
-#else
-	UINT32 ArgVal;
-#endif
-#endif	// ! USE_LIBAO
 	
 	if (WaveOutOpen)
 		return 0xD0;	// Thread is already active
@@ -270,13 +260,9 @@ UINT8 StartStream(UINT8 DeviceID)
 	if (DeviceID == 0xFF)
 		return 0x00;
 	
-#if defined(WIN32) || defined(USE_LIBAO)
 	BUFFERSIZE = SampleRate / 100 * SAMPLESIZE;
 	if (BUFFERSIZE > BUFSIZE_MAX)
 		BUFFERSIZE = BUFSIZE_MAX;
-#else
-	BUFFERSIZE = 1 << BUFSIZELD;
-#endif
 	SMPL_P_BUFFER = BUFFERSIZE / SAMPLESIZE;
 	if (AUDIOBUFFERU > AUDIOBUFFERS)
 		AUDIOBUFFERU = AUDIOBUFFERS;
@@ -454,25 +440,14 @@ void PauseStream(bool PauseOn)
 
 static DWORD WINAPI WaveOutThread(void* Arg)
 {
-#ifdef NDEBUG
-	UINT32 RetVal;
-#endif
+									printf("WaveOutThread\n");
+
 	UINT16 CurBuf;
 	WAVE_16BS* TempBuf;
 	UINT32 WrtSmpls;
-	//char TestStr[0x80];
 	bool DidBuffer;	// a buffer was processed
 	
 	hWaveOutThread = GetCurrentThread();
-#ifdef NDEBUG
-	RetVal = SetThreadPriority(hWaveOutThread, THREAD_PRIORITY_TIME_CRITICAL);
-	if (! RetVal)
-	{
-		// Error by setting priority
-		// try a lower priority, because too low priorities cause sound stuttering
-		RetVal = SetThreadPriority(hWaveOutThread, THREAD_PRIORITY_HIGHEST);
-	}
-#endif
 	
 	BlocksSent = 0x00;
 	BlocksPlayed = 0x00;
@@ -499,7 +474,6 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 				else
 					WaveHdrOut[CurBuf].dwUser |= 0x01;
 				
-								printf("WaveOutThread\n");
 
 				WrtSmpls = FillBuffer(TempBuf, SMPL_P_BUFFER);
 				
