@@ -51,12 +51,8 @@ typedef struct
 
 #endif
 
-#ifdef WIN32
 static DWORD WINAPI WaveOutThread(void* Arg);
-static void BufCheck(void);
-#else
-void WaveOutCallbackFnc(void);
-#endif
+// static void BufCheck(void);
 
 UINT16 AUDIOBUFFERU = AUDIOBUFFERS;		// used AudioBuffers
 
@@ -68,14 +64,9 @@ extern bool ThreadPauseEnable;
 extern volatile bool ThreadPauseConfrm;
 
 UINT32 BlockLen;
-#ifdef WIN32
 static HWAVEOUT hWaveOut;
 static WAVEHDR WaveHdrOut[AUDIOBUFFERS];
 static HANDLE hWaveOutThread;
-//static DWORD WaveOutCallbackThrID;
-#else
-static INT32 hWaveOut;
-#endif
 static bool WaveOutOpen;
 UINT32 BUFFERSIZE;	// Buffer Size in Bytes
 UINT32 SMPL_P_BUFFER;
@@ -275,6 +266,8 @@ UINT8 StartStream(UINT8 DeviceID)
 		ThreadPauseEnable = true;
 			printf("CreateThread\n");
 
+// https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createthread
+// I shouldn't be creating threads at all if possible?
 		WaveOutThreadHandle = CreateThread(NULL, 0x00, &WaveOutThread, NULL, 0x00,
 											&WaveOutThreadID);
 		if(WaveOutThreadHandle == NULL)
@@ -384,10 +377,13 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 {
 									printf("WaveOutThread\n");
 
+	// hWaveOutThread = NULL;
+	// return 0x00000000;
+
+
 	UINT16 CurBuf;
 	WAVE_16BS* TempBuf;
 	UINT32 WrtSmpls;
-	bool DidBuffer;	// a buffer was processed
 	
 	hWaveOutThread = GetCurrentThread();
 	
@@ -395,16 +391,6 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 	BlocksPlayed = 0x00;
 	while(! CloseThread)
 	{
-		while(PauseThread && ! CloseThread && ! (StreamPause && DidBuffer))
-		{
-			ThreadPauseConfrm = true;
-			Sleep(1);
-		}
-		if (CloseThread)
-			break;
-		
-		BufCheck();
-		DidBuffer = false;
 		for (CurBuf = 0x00; CurBuf < AUDIOBUFFERU; CurBuf ++)
 		{
 			if (WaveHdrOut[CurBuf].dwFlags & WHDR_DONE)
@@ -424,37 +410,11 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 				if (SoundLog && hFile != NULL)
 					SaveFile(WrtSmpls, TempBuf);
 				
-				DidBuffer = true;
 				BlocksSent ++;
-				BufCheck();
-				//CurBuf = 0x00;
-				//break;
 			}
-			if (CloseThread)
-				break;
 		}
-		Sleep(1);
 	}
 	
 	hWaveOutThread = NULL;
 	return 0x00000000;
-}
-
-static void BufCheck(void)
-{
-	UINT16 CurBuf;
-	
-	for (CurBuf = 0x00; CurBuf < AUDIOBUFFERU; CurBuf ++)
-	{
-		if (WaveHdrOut[CurBuf].dwFlags & WHDR_DONE)
-		{
-			if (WaveHdrOut[CurBuf].dwUser & 0x01)
-			{
-				WaveHdrOut[CurBuf].dwUser &= ~0x01;
-				BlocksPlayed ++;
-			}
-		}
-	}
-	
-	return;
 }
