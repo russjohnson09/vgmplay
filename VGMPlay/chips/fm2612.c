@@ -2238,6 +2238,8 @@ static void init_tables(void)
 /* Generate samples for one of the YM2612s */
 void ym2612_update_one(void *chip, FMSAMPLE **buffer, int length)
 {
+		// printf("ym2612_update_one\n");
+
 	YM2612 *F2612 = (YM2612 *)chip;
 	FM_OPN *OPN   = &F2612->OPN;
 	INT32 *out_fm = OPN->out_fm;
@@ -2605,6 +2607,7 @@ void ym2612_reset_chip(void *chip)
 /* v = value   */
 int ym2612_write(void *chip, int a, UINT8 v)
 {
+	// printf("ym2612_write\n");
 	YM2612 *F2612 = (YM2612 *)chip;
 	int addr;
 

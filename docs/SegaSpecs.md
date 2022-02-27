@@ -59,4 +59,31 @@ InterpretFile
 
 InterpretVGM // fill chip stream
 
+InterpretVGM makes a call to ChipMapper->chip_reg_write.
+
+This is the write to chip command. So just the low level command to set
+a pin to HIGH or LOW that will be interpretted by the software emulation.
+
+ChipMapper chip_reg_write ->
+2612intf.c ym2612_w ->
+fm2612.c ym2612_write
+
+
+
+
+
 ResampleChipStream // get chip stream to buffer.
+
+
+
+
+// When initializing the chip.
+CAA->StreamUpdate = &ym2612_stream_update;
+
+Used during the ResampleChipStream step.
+
+
+
+
+
+

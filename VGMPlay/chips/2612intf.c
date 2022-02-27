@@ -129,6 +129,7 @@ void ym2612_update_request(void *param)
 //static STREAM_UPDATE( ym2612_stream_update )
 void ym2612_stream_update(UINT8 ChipID, stream_sample_t **outputs, int samples)
 {
+	// printf("ym2612_stream_update\n");
 	//ym2612_state *info = (ym2612_state *)param;
 	ym2612_state *info = &YM2612Data[ChipID];
 #ifdef ENABLE_ALL_CORES

@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "mamedef.h": "c",
+        "vgmplay.h": "c",
+        "vgmplay_intf.h": "c",
+        "chipincl.h": "c",
+        "chipmapper.h": "c"
+    }
+}
