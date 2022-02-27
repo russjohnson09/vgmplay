@@ -283,9 +283,8 @@ UINT8 StartStream(UINT8 DeviceID)
 	}
 	WaveOutOpen = true;
 	
-	//sprintf(TestStr, "Buffer 0,0:\t%p\nBuffer 0,1:\t%p\nBuffer 1,0:\t%p\nBuffer 1,1:\t%p\n",
-	//		&BufferOut[0][0], &BufferOut[0][1], &BufferOut[1][0], &BufferOut[1][1]);
-	//AfxMessageBox(TestStr);
+
+	// initialize WaveHdrOut for WaveOutThread to read from.
 	for (Cnt = 0x00; Cnt < AUDIOBUFFERU; Cnt ++)
 	{
 		WaveHdrOut[Cnt].lpData = BufferOut[Cnt];	// &BufferOut[Cnt][0x00];
@@ -380,6 +379,8 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 	// hWaveOutThread = NULL;
 	// return 0x00000000;
 
+	// WaveHdrOut
+
 
 	UINT16 CurBuf;
 	WAVE_16BS* TempBuf;
@@ -391,10 +392,23 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 	// BlocksPlayed = 0x00;
 	while(! CloseThread)
 	{
-		printf("AUDIOBUFFERU %d\n",AUDIOBUFFERU); // 10
-		
+		// printf("AUDIOBUFFERU %d\n",AUDIOBUFFERU); // 10
+
 		for (CurBuf = 0x00; CurBuf < AUDIOBUFFERU; CurBuf ++)
 		{
+			//https://docs.microsoft.com/en-us/dotnet/api/microsoft.crm.unifiedservicedesk.dynamics.utilities.dwflags?view=dynamics-usd-3
+
+			// mask off the bits we don't care about from the dwFlags using WHDR_DONE.
+			// I'm unsure if WHDR_DONE and WHDR_PREPARED should be set at the same time but you 
+			// can if you want.
+			// WHDR_DONE = 0b01 , WHDR_PREPARED = 0b10.
+			// so 3 = 0x03 = 0b11
+			// 0b11111111 8 bits = 0 - 255.
+			//  16 * 16 = 256.
+			// 0b1111 0b1111 = 0xF 0xF or just FF. Each 1/2 byte is represented as a single character.
+			// 2 characters represent the whole byte of 8 bits.
+
+			
 			if (WaveHdrOut[CurBuf].dwFlags & WHDR_DONE)
 			{
 				TempBuf = (WAVE_16BS*)WaveHdrOut[CurBuf].lpData;
@@ -408,10 +422,12 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 
 				WrtSmpls = FillBuffer(TempBuf, SMPL_P_BUFFER);
 				
+				//https://docs.microsoft.com/en-us/windows/win32/api/mmeapi/nf-mmeapi-waveoutwrite
+				// raw wave output is sent at this point.
 				WaveHdrOut[CurBuf].dwBufferLength = WrtSmpls * SAMPLESIZE;
 				waveOutWrite(hWaveOut, &WaveHdrOut[CurBuf], sizeof(WAVEHDR));
-				if (SoundLog && hFile != NULL)
-					SaveFile(WrtSmpls, TempBuf);
+				// if (SoundLog && hFile != NULL)
+				// 	SaveFile(WrtSmpls, TempBuf);
 				
 				// BlocksSent ++;
 			}

@@ -301,6 +301,9 @@ int main(int argc, char* argv[])
 	
 	printf("\nFile Name:\t");
 	strcpy(VgmFileName, "../music/megadrive/01 - [Prologue].vgm");
+	// strcpy(VgmFileName, "../music/megadrive/02 - Green Hill Zone.vgm");
+	strcpy(VgmFileName, "../music/megadrive/03 - Komorebi no Musume Reading Girl 1.vgm");
+
 	DispFileName = VgmFileName;
 
 	printf("%s\n", DispFileName);
@@ -1210,7 +1213,7 @@ static void PlayVGM_UI(void)
 		printf("\n\nPlayVGM_UI post PlayVGM %d\n\n",PlayingMode);
 
 	// don't set Stream.c AUDIOBUFFERU
-	// AUDIOBUFFERU = 10;
+	// AUDIOBUFFERU = 1000;
 
 			printf("\n FileMode post PlayVGM %d\n\n",FileMode);
 

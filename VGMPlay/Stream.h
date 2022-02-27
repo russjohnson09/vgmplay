@@ -18,11 +18,11 @@
 
 // There https://arduino.stackexchange.com/questions/1813/asynchronous-function-calls-in-arduino-sketch
 #define SAMPLESIZE		sizeof(WAVE_16BS)
-#define BUFSIZE_MAX		0x1000		// Maximum Buffer Size in Bytes
-#ifndef WIN32
-#define BUFSIZELD		11			// Buffer Size
-#endif
-#define AUDIOBUFFERS	200			// Maximum Buffer Count
+// #define BUFSIZE_MAX		0x1000		// Maximum Buffer Size in Bytes
+// #define AUDIOBUFFERS	200			// Maximum Buffer Count
+
+#define BUFSIZE_MAX		0x10000		// Maximum Buffer Size in Bytes
+#define AUDIOBUFFERS	2000			// Maximum Buffer Count
 //	Windows:	BUFFERSIZE = SampleRate / 100 * SAMPLESIZE (44100 / 100 * 4 = 1764)
 //				1 Audio-Buffer = 10 msec, Min: 5
 //				Win95- / WinVista-safe: 500 msec

@@ -3890,75 +3890,11 @@ INT32 SamplePlayback2VGM(INT32 SampleVal)
 
 static UINT8 StartThread(void)
 {
-#ifdef WIN32
-	HANDLE PlayThreadHandle;
-	DWORD PlayThreadID;
-	//char TestStr[0x80];
-	
-	if (PlayThreadOpen)
-		return 0xD0;	// Thread is already active
-	
-	PauseThread = true;
-	ThreadNoWait = false;
-	ThreadPauseConfrm = false;
-	CloseThread = false;
-	ThreadPauseEnable = true;
-	
-	PlayThreadHandle = CreateThread(NULL, 0x00, &PlayingThread, NULL, 0x00, &PlayThreadID);
-	if (PlayThreadHandle == NULL)
-		return 0xC8;		// CreateThread failed
-	CloseHandle(PlayThreadHandle);
-	
-	PlayThreadOpen = true;
-	//PauseThread = false;	is done after File Init
-	
-	return 0x00;
-#else
-	UINT32 RetVal;
-	
-	PauseThread = true;
-	ThreadNoWait = false;
-	ThreadPauseConfrm = false;
-	CloseThread = false;
-	ThreadPauseEnable = true;
-	
-	RetVal = pthread_create(&hPlayThread, NULL, &PlayingThread, NULL);
-	if (RetVal)
-		return 0xC8;		// CreateThread failed
-	
-	PlayThreadOpen = true;
-	
-	return 0x00;
-#endif
 }
 
-static UINT8 StopThread(void)
-{
-#ifdef WIN32
-	UINT16 Cnt;
-#endif
+static UINT8 StopThread(void) {
 	
-	if (! PlayThreadOpen)
-		return 0xD8;	// Thread is not active
-	
-#ifdef WIN32
-	CloseThread = true;
-	for (Cnt = 0; Cnt < 100; Cnt ++)
-	{
-		Sleep(1);
-		if (hPlayThread == NULL)
-			break;
-	}
-#else
-	CloseThread = true;
-	pthread_join(hPlayThread, NULL);
-#endif
-	PlayThreadOpen = false;
-	ThreadPauseEnable = false;
-	
-	return 0x00;
 }
-
 #if defined(WIN32) && defined(MIXER_MUTING)
 //static bool GetMixerControl(HMIXEROBJ hmixer, MIXERCONTROL* mxc)
 static bool GetMixerControl(void)
@@ -5834,119 +5770,18 @@ static void ResampleChipStream(CA_LIST* CLst, WAVE_32BS* RetSample, UINT32 Lengt
 	CAA = CLst->CAud;
 	CurBufL = StreamBufs[0x00];
 	CurBufR = StreamBufs[0x01];
+
+
+	// printf("ResampleChipStream %d \n",CAA->Resampler);
+
+	// 0x03 is in use.
 	
 	// This Do-While-Loop gets and resamples the chip output of one or more chips.
 	// It's a loop to support the AY8910 paired with the YM2203/YM2608/YM2610.
-	do
-	{
-		switch(CAA->Resampler)
+	// do
+	// {
+		switch(0x03)
 		{
-		case 0x00:	// old, but very fast resampler
-			CAA->SmpLast = CAA->SmpNext;
-			CAA->SmpP += Length;
-			CAA->SmpNext = (UINT32)((UINT64)CAA->SmpP * CAA->SmpRate / SampleRate);
-			if (CAA->SmpLast >= CAA->SmpNext)
-			{
-				RetSample->Left += CAA->LSmpl.Left * CAA->Volume;
-				RetSample->Right += CAA->LSmpl.Right * CAA->Volume;
-			}
-			else
-			{
-				SmpCnt = CAA->SmpNext - CAA->SmpLast;
-				
-				CAA->StreamUpdate(CAA->ChipID, StreamBufs, SmpCnt);
-				
-				if (SmpCnt == 1)
-				{
-					RetSample->Left += CurBufL[0x00] * CAA->Volume;
-					RetSample->Right += CurBufR[0x00] * CAA->Volume;
-					CAA->LSmpl.Left = CurBufL[0x00];
-					CAA->LSmpl.Right = CurBufR[0x00];
-				}
-				else if (SmpCnt == 2)
-				{
-					RetSample->Left += (CurBufL[0x00] + CurBufL[0x01]) * CAA->Volume >> 1;
-					RetSample->Right += (CurBufR[0x00] + CurBufR[0x01]) * CAA->Volume >> 1;
-					CAA->LSmpl.Left = CurBufL[0x01];
-					CAA->LSmpl.Right = CurBufR[0x01];
-				}
-				else
-				{
-					TempS32L = CurBufL[0x00];
-					TempS32R = CurBufR[0x00];
-					for (CurSmpl = 0x01; CurSmpl < SmpCnt; CurSmpl ++)
-					{
-						TempS32L += CurBufL[CurSmpl];
-						TempS32R += CurBufR[CurSmpl];
-					}
-					RetSample->Left += TempS32L * CAA->Volume / SmpCnt;
-					RetSample->Right += TempS32R * CAA->Volume / SmpCnt;
-					CAA->LSmpl.Left = CurBufL[SmpCnt - 1];
-					CAA->LSmpl.Right = CurBufR[SmpCnt - 1];
-				}
-			}
-			break;
-		case 0x01:	// Upsampling
-			ChipSmpRate = CAA->SmpRate;
-			InPosL = (SLINT)(FIXPNT_FACT * CAA->SmpP * ChipSmpRate / SampleRate);
-			InPre = (UINT32)fp2i_floor(InPosL);
-			InNow = (UINT32)fp2i_ceil(InPosL);
-			/*if (InNow - CAA->SmpNext >= SMPL_BUFSIZE)
-			{
-				fprintf(stderr, "Sample Buffer Overflow!\n");
-#ifdef _DEBUG
-				*(char*)NULL = 0;
-#endif
-				CAA->SmpLast = 0;
-				CAA->SmpNext = 0;
-				CAA->SmpP = 0;
-				break;
-			}*/
-			
-			CurBufL[0x00] = CAA->LSmpl.Left;
-			CurBufR[0x00] = CAA->LSmpl.Right;
-			CurBufL[0x01] = CAA->NSmpl.Left;
-			CurBufR[0x01] = CAA->NSmpl.Right;
-			StreamPnt[0x00] = &CurBufL[0x02];
-			StreamPnt[0x01] = &CurBufR[0x02];
-			CAA->StreamUpdate(CAA->ChipID, StreamPnt, InNow - CAA->SmpNext);
-			
-			InBase = FIXPNT_FACT + (UINT32)(InPosL - (SLINT)CAA->SmpNext * FIXPNT_FACT);
-			/*if (fp2i_floor(InBase) >= SMPL_BUFSIZE)
-			{
-				fprintf(stderr, "Sample Buffer Overflow!\n");
-#ifdef _DEBUG
-				*(char*)NULL = 0;
-#endif
-				CAA->SmpLast = 0;
-				CAA->SmpP = 0;
-				break;
-			}*/
-			SmpCnt = FIXPNT_FACT;
-			CAA->SmpLast = InPre;
-			CAA->SmpNext = InNow;
-			for (OutPos = 0x00; OutPos < Length; OutPos ++)
-			{
-				InPos = InBase + (UINT32)(FIXPNT_FACT * OutPos * ChipSmpRate / SampleRate);
-				
-				InPre = fp2i_floor(InPos);
-				InNow = fp2i_ceil(InPos);
-				SmpFrc = getfriction(InPos);
-				
-				// Linear interpolation
-				TempSmpL = ((INT64)CurBufL[InPre] * (FIXPNT_FACT - SmpFrc)) +
-							((INT64)CurBufL[InNow] * SmpFrc);
-				TempSmpR = ((INT64)CurBufR[InPre] * (FIXPNT_FACT - SmpFrc)) +
-							((INT64)CurBufR[InNow] * SmpFrc);
-				RetSample[OutPos].Left += (INT32)(TempSmpL * CAA->Volume / SmpCnt);
-				RetSample[OutPos].Right += (INT32)(TempSmpR * CAA->Volume / SmpCnt);
-			}
-			CAA->LSmpl.Left = CurBufL[InPre];
-			CAA->LSmpl.Right = CurBufR[InPre];
-			CAA->NSmpl.Left = CurBufL[InNow];
-			CAA->NSmpl.Right = CurBufR[InNow];
-			CAA->SmpP += Length;
-			break;
 		case 0x02:	// Copying
 			CAA->SmpNext = CAA->SmpP * CAA->SmpRate / SampleRate;
 			CAA->StreamUpdate(CAA->ChipID, StreamBufs, Length);
@@ -6037,8 +5872,7 @@ static void ResampleChipStream(CA_LIST* CLst, WAVE_32BS* RetSample, UINT32 Lengt
 			CAA->SmpP -= SampleRate;
 		}
 		
-		CAA = CAA->Paired;
-	} while(CAA != NULL);
+	// } while(CAA != NULL);
 	
 	return;
 }
@@ -6077,88 +5911,23 @@ UINT32 FillBuffer(WAVE_16BS* Buffer, UINT32 BufferSize)
 	
 	//memset(Buffer, 0x00, sizeof(WAVE_16BS) * BufferSize);
 	
-	RecalcStep = FadePlay ? SampleRate / 44100 : 0;
-	CurMstVol = RecalcFadeVolume();
-	
-	if (Buffer == NULL)
-	{
-		//for (CurSmpl = 0x00; CurSmpl < BufferSize; CurSmpl ++)
-		//	InterpretFile(1);
-		InterpretFile(BufferSize);
-		
-		if (FadePlay && ! FadeStart)
-		{
-			FadeStart = PlayingTime;
-			RecalcStep = FadePlay ? SampleRate / 100 : 0;
-		}
-		//if (RecalcStep && ! (CurSmpl % RecalcStep))
-		if (RecalcStep)
-			CurMstVol = RecalcFadeVolume();
-		
-		if (VGMEnd)
-		{
-			if (PauseSmpls <= BufferSize)
-			{
-				PauseSmpls = 0;
-				EndPlay = true;
-			}
-			else
-			{
-				PauseSmpls -= BufferSize;
-			}
-		}
-		
-		return BufferSize;
-	}
-	
-	CurChipList = (VGMEnd || PausePlay) ? ChipListPause : ChipListAll;
+	// RecalcStep = FadePlay ? SampleRate / 44100 : 0;
+	// CurMstVol = RecalcFadeVolume();
+
+	RecalcStep = 0;
+	CurMstVol = 255; // 1 no change
+
+	CurChipList = ChipListAll;
+
+	// printf("RecalcStep %d\n",RecalcStep);
+	// printf("CurMstVol %d\n",CurMstVol);
+
 	
 	for (CurSmpl = 0x00; CurSmpl < BufferSize; CurSmpl ++)
 	{
+		// printf("Buffer %d",BufferSize);
 		InterpretFile(1);
-		
-		// Sample Structures
-		//	00 - SN76496
-		//	01 - YM2413
-		//	02 - YM2612
-		//	03 - YM2151
-		//	04 - SegaPCM
-		//	05 - RF5C68
-		//	06 - YM2203
-		//	07 - YM2608
-		//	08 - YM2610/YM2610B
-		//	09 - YM3812
-		//	0A - YM3526
-		//	0B - Y8950
-		//	0C - YMF262
-		//	0D - YMF278B
-		//	0E - YMF271
-		//	0F - YMZ280B
-		//	10 - RF5C164
-		//	11 - PWM
-		//	12 - AY8910
-		//	13 - GameBoy
-		//	14 - NES APU
-		//	15 - MultiPCM
-		//	16 - UPD7759
-		//	17 - OKIM6258
-		//	18 - OKIM6295
-		//	19 - K051649
-		//	1A - K054539
-		//	1B - HuC6280
-		//	1C - C140
-		//	1D - K053260
-		//	1E - Pokey
-		//	1F - QSound
-		//	20 - YMF292/SCSP
-		//	21 - WonderSwan
-		//	22 - VSU
-		//	23 - SAA1099
-		//	24 - ES5503
-		//	25 - ES5506
-		//	26 - X1-010
-		//	27 - C352
-		//	28 - GA20
+
 		TempBuf.Left = 0x00;
 		TempBuf.Right = 0x00;
 		CurCLst = CurChipList;
@@ -6171,9 +5940,12 @@ UINT32 FillBuffer(WAVE_16BS* Buffer, UINT32 BufferSize)
 			CurCLst = CurCLst->next;
 		}
 		
+		// TODO simplify this.
 		// ChipData << 9 [ChipVol] >> 5 << 8 [MstVol] >> 11  ->  9-5+8-11 = <<1
 		TempBuf.Left = ((TempBuf.Left >> 5) * CurMstVol) >> 11;
 		TempBuf.Right = ((TempBuf.Right >> 5) * CurMstVol) >> 11;
+
+
 		if (SurroundSound)
 			TempBuf.Right *= -1;
 		Buffer[CurSmpl].Left = Limit2Short(TempBuf.Left);
@@ -6187,22 +5959,6 @@ UINT32 FillBuffer(WAVE_16BS* Buffer, UINT32 BufferSize)
 		if (RecalcStep && ! (CurSmpl % RecalcStep))
 			CurMstVol = RecalcFadeVolume();
 		
-		if (VGMEnd)
-		{
-			if (! PauseSmpls)
-			{
-				//if (! FullBufFill)
-				if (! EndPlay)
-				{
-					EndPlay = true;
-					break;
-				}
-			}
-			else //if (PauseSmpls)
-			{
-				PauseSmpls --;
-			}
-		}
 	}
 	
 	return CurSmpl;
