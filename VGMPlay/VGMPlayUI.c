@@ -302,27 +302,11 @@ int main(int argc, char* argv[])
 
 	printf("%s\n", DispFileName);
 
-	if (! strlen(VgmFileName))
-		goto ExitProgram;
-	StandardizeDirSeparators(VgmFileName);
+	// StandardizeDirSeparators(VgmFileName);
 
 	FirstInit = true;
 	StreamStarted = false;
 	FileExt = GetFileExtension(VgmFileName);
-	// PLMode = 0x01;
-	// PLMode = 0x00;
-
-	if (FileExt == NULL || stricmp_u(FileExt, "m3u"))
-		PLMode = 0x00;
-	else
-		PLMode = 0x01;
-
-	printf("\nplmode");
-	printf("PLMode");
-	printf("%d", PLMode);
-	printf("\n\nFile Extension: %s\n", FileExt);
-
-	printf("\nplmode");
 
 	lastMMEvent = 0x00;
 		PLFileCount = 0x00;
@@ -334,7 +318,7 @@ int main(int argc, char* argv[])
 			if (argv[0][1] == ':')
 				_getch();
 			ErrRet = 1;
-			goto ExitProgram;
+			return ErrRet;
 		}
 		printf("\nsdfsdf");
 		
@@ -342,29 +326,16 @@ int main(int argc, char* argv[])
 		FadeTime = FadeTimeN;
 		PauseTime = PauseTimeL;
 		PrintMSHours = (VGMHead.lngTotalSamples >= 158760000);	// 44100 smpl * 60 sec * 60 min
+
+
 		ShowVGMTag();
 		NextPLCmd = 0x80;
+
+
 		PlayVGM_UI();
 		
-		CloseVGMFile();
+		// CloseVGMFile();
 	
-	
-	if (ErrorHappened && argv[0][1] == ':')
-	{
-		if (_kbhit())
-			_getch();
-		_getch();
-	}
-	
-#ifdef _DEBUG
-	printf("Press any key ...");
-	_getch();
-#endif
-	
-ExitProgram:
-	MultimediaKeyHook_Deinit();
-	VGMPlay_Deinit();
-	free(AppName);
 	
 	return ErrRet;
 }
@@ -1223,7 +1194,12 @@ static void PlayVGM_UI(void)
 	bool QuitPlay;
 	UINT32 PlayTimeEnd;
 	
+	// \r is overwritten by the next line.
 	printf("Initializing ...\r");
+	printf("Initializing ...\r");
+	// printf("Initializing ...\n");
+
+	printf("PlayVGM_UI\n\n");
 	
 	PlayVGM();
 	DBus_EmitSignal(SIGNAL_SEEK | SIGNAL_METADATA | SIGNAL_PLAYSTATUS | SIGNAL_CONTROLS);

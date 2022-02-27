@@ -889,55 +889,12 @@ void PlayVGM(void)
 	
 	// FM Check
 	FMVal = 0x00;
-	if (FMPort)
-	{
-		// check usage of devices that use the FM port, and ones that don't use it
-		for (CurChip = 0x00; CurChip < CHIP_COUNT; CurChip ++)
-		{
-			if (! GetChipClock(&VGMHead, CurChip, NULL))
-				continue;
-			
-			// supported chips are:
-			//	SN76496 (0x00, special behaviour), YM2413 (0x01)
-			//	YM3812 (0x09), YM3526 (0x0A), Y8950 (0x0B), YMF262 (0x0C)
-			if (CurChip == 0x00 || CurChip == 0x12)
-									// The SN76496 and AY8910 have a special state because of
-				FMVal |= 0x04;		// bad FM emulation and fast software emulation.
-			else if (CurChip == 0x01 || (CurChip >= 0x09 && CurChip <= 0x0C))
-				FMVal |= 0x02;
-			else
-				FMVal |= 0x01;
-		}
-		
-		if (! FMForce)
-		{
-			if (FMVal & 0x01)	// one or more software emulators used?
-				FMVal &= ~0x02;	// use only software emulation
-			
-			if (FMVal == 0x04)
-				FMVal = 0x01;	// FM SN76496 emulaton is bad
-			else if ((FMVal & 0x05) == 0x05)
-				FMVal &= ~0x04;	// prefer software SN76496 instead of unsynced output
-		}
-		FMVal = (FMVal & ~0x04) | ((FMVal & 0x04) >> 1);
-	}
-	switch(FMVal)
-	{
-	case 0x00:
-	case 0x01:
-		PlayingMode = 0x00;	// Normal Mode
-		break;
-	case 0x02:
-		PlayingMode = 0x01;	// FM only Mode
-		break;
-	case 0x03:
-		PlayingMode = 0x02;	// Normal/FM mixed Mode (NOT in sync, Hardware is a lot faster)
-		//PlayingMode = 0x00;	// Force Normal Mode until I get them in sync - Mixed Mode
-								// sounds terrible
-		break;
-	}
+
+	printf("\nFMVal:%d\nFRMPort:%d\n",FMVal,FMPort);
+	PlayingMode = 0x00;	// Normal Mode
 	UseFM = (PlayingMode > 0x00);
-	
+		printf("\nUseFM:%d\nFRMPort:%d\n",UseFM,FMPort);
+
 	if (VGMHead.bytVolumeModifier <= VOLUME_MODIF_WRAP)
 		TempSLng = VGMHead.bytVolumeModifier;
 	else if (VGMHead.bytVolumeModifier == (VOLUME_MODIF_WRAP + 0x01))
@@ -945,13 +902,6 @@ void PlayVGM(void)
 	else
 		TempSLng = VGMHead.bytVolumeModifier - 0x100;
 	VolumeLevelM = (float)(VolumeLevel * pow(2.0, TempSLng / (double)0x20));
-	if (UseFM)
-	{
-		if (FMVol > 0.0f)
-			VolumeLevelM = FMVol;
-		else if (FMVol < 0.0f)
-			VolumeLevelM *= -FMVol;
-	}
 	FinalVol = VolumeLevelM;
 	
 	if (! VGMMaxLoop)
@@ -995,60 +945,59 @@ void PlayVGM(void)
 	if (VGMPos >= VGMHead.lngEOFOffset)
 		VGMEnd = true;
 	
-#ifdef CONSOLE_MODE
-	memset(CmdList, 0x00, 0x100 * sizeof(UINT8));
-#endif
 	
-	if (! PauseEmulate)
-	{
-		switch(PlayingMode)
-		{
-		case 0x00:
-			//PauseStream(PausePlay);
-			break;
-		case 0x01:
-			//PauseThread = PausePlay;
-			SetMuteControl(PausePlay);
-			break;
-		case 0x02:
-			//PauseStream(PausePlay);
-			SetMuteControl(PausePlay);
-			break;
-		}
-	}
+	// printf("\nUseFM:%d\nFRMPort:%d\n",UseFM,FMPort);
+
+	// if (! PauseEmulate)
+	// {
+	// 	switch(PlayingMode)
+	// 	{
+	// 	case 0x00:
+	// 		//PauseStream(PausePlay);
+	// 		break;
+	// 	case 0x01:
+	// 		//PauseThread = PausePlay;
+	// 		SetMuteControl(PausePlay);
+	// 		break;
+	// 	case 0x02:
+	// 		//PauseStream(PausePlay);
+	// 		SetMuteControl(PausePlay);
+	// 		break;
+	// 	}
+	// }
 	
 	Chips_GeneralActions(0x00);	// Start chips
 	// also does Reset (0x01), Muting Mask (0x10) and Panning (0x20)
 	
-	if (UseFM)
-	{
-		// TODO: get FirstInit working
-		//if (! FirstInit)
-		{
-			StartSkipping();	// don't apply OPL Reset to make Track changes smooth
-			AutoStopSkip = true;
-		}
-		open_real_fm();
-	}
+	// if (UseFM)
+	// {
+	// 	// TODO: get FirstInit working
+	// 	//if (! FirstInit)
+	// 	{
+	// 		StartSkipping();	// don't apply OPL Reset to make Track changes smooth
+	// 		AutoStopSkip = true;
+	// 	}
+	// 	open_real_fm();
+	// }
 	
-	switch(PlayingMode)
-	{
-	case 0x00:	// the application controls the playback thread
-		break;
-	case 0x01:	// FM Playback needs an independent thread
-		ResetPBTimer = false;
-		if (StartThread())
-		{
-			fprintf(stderr, "Error starting Playing Thread!\n");
-			return;
-		}
-#ifdef CONSOLE_MODE
-		PauseStream(true);
-#endif
-		break;
-	case 0x02:	// like Mode 0x00, but Hardware is also controlled (not synced)
-		break;
-	}
+// 	switch(PlayingMode)
+// 	{
+// 	case 0x00:	// the application controls the playback thread
+// 		break;
+// 	case 0x01:	// FM Playback needs an independent thread
+// 		ResetPBTimer = false;
+// 		if (StartThread())
+// 		{
+// 			fprintf(stderr, "Error starting Playing Thread!\n");
+// 			return;
+// 		}
+// #ifdef CONSOLE_MODE
+// 		PauseStream(true);
+// #endif
+// 		break;
+// 	case 0x02:	// like Mode 0x00, but Hardware is also controlled (not synced)
+// 		break;
+// 	}
 	
 	Last95Drum = 0xFFFF;
 	Last95Freq = 0;
