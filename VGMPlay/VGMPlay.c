@@ -2705,11 +2705,9 @@ static void InterpretFile(UINT32 SampleCount)
 	UINT32 TempLng;
 	UINT8 CurChip;
 	
-	//if (Interpreting && SampleCount == 1)
-	//	return;
 	while(Interpreting)
 		Sleep(1);
-		// printf("InterpretFile 2");
+		printf("InterpretFile 2");
 
 	if (DacCtrlUsed && SampleCount > 1)	// handle skipping
 	{
