@@ -1086,6 +1086,8 @@ void SeekVGM(bool Relative, INT32 PlayBkSamples)
 		RestartPlaying();
 	}
 	
+		printf("SeekVGM\n");
+
 	ForceVGMExec = true;
 	InterpretFile(Samples);
 	ForceVGMExec = false;
@@ -4064,7 +4066,7 @@ static bool SetMuteControl(bool mute)
 
 static void InterpretFile(UINT32 SampleCount)
 {
-	// printf("InterpretFile");
+	// printf("InterpretFile %d\n",SampleCount);
 	UINT32 TempLng;
 	UINT8 CurChip;
 	
@@ -6066,6 +6068,7 @@ static INT32 RecalcFadeVolume(void)
 
 UINT32 FillBuffer(WAVE_16BS* Buffer, UINT32 BufferSize)
 {
+	printf("FillBuffer\n");
 	UINT32 CurSmpl;
 	WAVE_32BS TempBuf;
 	INT32 CurMstVol;
@@ -6208,6 +6211,7 @@ UINT32 FillBuffer(WAVE_16BS* Buffer, UINT32 BufferSize)
 #ifdef WIN32
 DWORD WINAPI PlayingThread(void* Arg)
 {
+
 	LARGE_INTEGER CPUFreq;
 	LARGE_INTEGER TimeNow;
 	LARGE_INTEGER TimeLast;
@@ -6239,6 +6243,7 @@ DWORD WINAPI PlayingThread(void* Arg)
 		
 		if (! PauseThread)
 		{
+			printf("PlayingThread\n");
 			TimeDiff = TimeNow.QuadPart - TimeLast.QuadPart;
 			if (TimeDiff >= SampleTick)
 			{
@@ -6310,6 +6315,8 @@ void* PlayingThread(void* Arg)
 		
 		if (! PauseThread)
 		{
+							printf("PlayingThread\n");
+
 			TimeDiff = TimeNow - TimeLast;
 			if (TimeDiff >= SampleTick)
 			{

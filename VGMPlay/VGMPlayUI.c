@@ -1203,36 +1203,13 @@ static void PlayVGM_UI(void)
 	
 	PlayVGM();
 	DBus_EmitSignal(SIGNAL_SEEK | SIGNAL_METADATA | SIGNAL_PLAYSTATUS | SIGNAL_CONTROLS);
-	/*switch(LogToWave)
-	{
-	case 0x00:
-		break;
-	case 0x01:
-		// Currently there's no record for Hardware FM
-		PlayingMode = 0x00;	// Impossible to log at full speed AND use FMPort
-		break;
-	case 0x02:
-		if (PlayingMode == 0x01)
-			LogToWave = 0x00;	// Output and log sound (FM isn't logged)
-		break;
-	}*/
-	switch(PlayingMode)
-	{
-	case 0x00:
-		AUDIOBUFFERU = 10;
-		break;
-	case 0x01:
-		AUDIOBUFFERU = 0;	// no AudioBuffers needed
-		break;
-	case 0x02:
-		AUDIOBUFFERU = 5;	// try to sync Hardware/Software Emulator as well as possible
-		break;
-	}
-	if (AUDIOBUFFERU < NEED_LARGE_AUDIOBUFS)
-		AUDIOBUFFERU = NEED_LARGE_AUDIOBUFS;
-	if (ForceAudioBuf && AUDIOBUFFERU)
-		AUDIOBUFFERU = ForceAudioBuf;
-	
+
+		printf("\n\nPlayVGM_UI post PlayVGM %d\n\n",PlayingMode);
+
+	AUDIOBUFFERU = 10;
+
+			printf("\n FileMode post PlayVGM %d\n\n",FileMode);
+
 	switch(FileMode)
 	{
 	case 0x00:	// VGM
@@ -1251,9 +1228,11 @@ static void PlayVGM_UI(void)
 		IsRAWLog = false;
 	
 #ifndef WIN32
+	printf("\n WIN32\n\n");
 	changemode(true);
 #endif
-	
+			printf("\n PlayingMode post PlayVGM %d\n\n",PlayingMode);
+
 	switch(PlayingMode)
 	{
 	case 0x00:
@@ -1344,11 +1323,7 @@ static void PlayVGM_UI(void)
 			PlaySmpl = VGMPos - VGMPlaySt;
 
 #ifdef WIN32
-			printf("Playing %01.2f%%\t", 100.0 * PlaySmpl / VGMPlayEnd);
-#else
-			// \t doesn't display correctly under Linux
-			// but \b causes flickering under Windows
-			printf("Playing %01.2f%%   \b\b\b\t", 100.0 * PlaySmpl / VGMPlayEnd);
+			printf("Playing WIN32 %01.2f%%\t", 100.0 * PlaySmpl / VGMPlayEnd);
 #endif
 			if (LogToWave != 0x01)
 			{
@@ -1366,7 +1341,6 @@ static void PlayVGM_UI(void)
 			}
 			else
 			{
-				//printf("%i", VGMSmplPos);
 				while(PlaySmpl < SampleVGM2Playback(VGMHead.lngTotalSamples -
 					VGMHead.lngLoopSamples))
 					PlaySmpl += SampleVGM2Playback(VGMHead.lngLoopSamples);
@@ -1377,25 +1351,14 @@ static void PlayVGM_UI(void)
 			printf(" / ");
 			PrintMinSec(VGMPbSmplCount, SampleRate);
 			printf(" seconds");
-			if (Show95Cmds && Last95Max != 0xFFFF)
-			{
-				UINT16 drumID = 1 + Last95Drum;	// 0-based -> 1-based, 0xFFFF = 0
-				if (Show95Cmds == 0x01)
-					printf("  %02hX / %02hX", drumID , Last95Max);
-				else if (Show95Cmds == 0x02)
-					printf("  %02hX / %02hX at %5u Hz", drumID, Last95Max, Last95Freq);
-				else if (Show95Cmds == 0x03)
-					printf("  %02hX / %02hX at %4.1f KHz", drumID, Last95Max,
-							Last95Freq / 1000.0);
-			}
-			//printf("  %u / %u", multipcm_get_channels(0, NULL), 28);
 			printf("\r");
-#ifndef WIN32
-			fflush(stdout);
-#endif
 			
+			// TODO this is the main thing I am interested in.
+			// Where do the samples get populated from so that this
+			// can be simplified.
 			if (LogToWave == 0x01 && ! PausePlay)
 			{
+				printf("LogToWave");
 				TempLng = FillBuffer(TempBuf, LOG_SAMPLES);
 				if (TempLng)
 					SaveFile(TempLng, TempBuf);
@@ -1421,228 +1384,6 @@ static void PlayVGM_UI(void)
 		else
 			Sleep(50);
 #endif
-		
-		if (EndPlay)
-		{
-			if (! PlayTimeEnd)
-			{
-				PlayTimeEnd = PlayingTime;
-				// quitting now terminates the program, so I need some special
-				// checks to make sure that the rest of the audio buffer is played
-				if (! PLFileCount || CurPLFile >= PLFileCount - 0x01)
-				{
-					if (FileMode == 0x01)
-						PlayTimeEnd += SampleRate << 1;	// Add 2 secs
-					PlayTimeEnd += AUDIOBUFFERU * SMPL_P_BUFFER;
-				}
-			}
-			
-			if (PlayingTime >= PlayTimeEnd)
-				QuitPlay = true;
-		}
-		if (_kbhit() || lastMMEvent)
- 		{
-			if (lastMMEvent)
-			{
-				if (lastMMEvent == MMKEY_PLAY)
-					KeyCode = ' ';
-				else if (lastMMEvent == MMKEY_PREV)
-					KeyCode = 'B';
-				else if (lastMMEvent == MMKEY_NEXT)
-					KeyCode = 'N';
-				lastMMEvent = 0x00;
-			}
-			else
-			{
-				KeyCode = _getch();
-			}
-			if (KeyCode < 0x80)
-				KeyCode = toupper(KeyCode);
-			switch(KeyCode)
-			{
-#ifndef WIN32
-			case 0x1B:	// Special Key
-				KeyCode = _getch();
-				if (KeyCode == 0x1B || KeyCode == 0x00)
-				{
-					// ESC Key pressed
-					QuitPlay = true;
-					NextPLCmd = 0xFF;
-					break;
-				}
-				switch(KeyCode)
-				{
-				case 0x5B:
-					// Cursor-Key Table
-					//	Key		KeyCode
-					//	Up		41
-					//	Down	42
-					//	Left	44
-					//	Right	43
-					// Cursor only: CursorKey
-					// Ctrl: 0x31 + 0x3B + 0x35 + CursorKey
-					// Alt: 0x31 + 0x3B + 0x33 + CursorKey
-					
-					// Page-Keys: PageKey + 0x7E
-					//	PageUp		35
-					//	PageDown	36
-					KeyCode = _getch();	// Get 2nd Key
-					// Convert Cursor Key Code from Linux to Windows
-					switch(KeyCode)
-					{
-					case 0x31:	// Ctrl or Alt key
-						KeyCode = _getch();
-						if (KeyCode == 0x3B)
-						{
-							KeyCode = _getch();
-							if (KeyCode == 0x35)
-							{
-								KeyCode = _getch();
-								switch(KeyCode)
-								{
-								case 0x41:
-									KeyCode = 0x8D;
-									break;
-								case 0x42:
-									KeyCode = 0x91;
-									break;
-								case 0x43:
-									KeyCode = 0x74;
-									break;
-								case 0x44:
-									KeyCode = 0x73;
-									break;
-								default:
-									KeyCode = 0x00;
-									break;
-								}
-							}
-						}
-						
-						if ((KeyCode & 0xF0) == 0x30)
-							KeyCode = 0x00;
-						break;
-					case 0x35:
-						KeyCode = 0x49;
-						_getch();
-						break;
-					case 0x36:
-						KeyCode = 0x51;
-						_getch();
-						break;
-					case 0x41:
-						KeyCode = 0x48;
-						break;
-					case 0x42:
-						KeyCode = 0x50;
-						break;
-					case 0x43:
-						KeyCode = 0x4D;
-						break;
-					case 0x44:
-						KeyCode = 0x4B;
-						break;
-					default:
-						KeyCode = 0x00;
-						break;
-					}
-				}
-				// At this point I have Windows-style keys.
-#else	//#ifdef WIN32
-			case 0xE0:	// Special Key
-				// Cursor-Key Table
-				// Shift + Cursor results in the usual value for the Cursor Key
-				// Alt + Cursor results in 0x00 + (0x50 + CursorKey) (0x00 instead of 0xE0)
-				//	Key		None	Ctrl
-				//	Up		48		8D
-				//	Down	50		91
-				//	Left	4B		73
-				//	Right	4D		74
-				KeyCode = _getch();	// Get 2nd Key
-#endif
-				switch(KeyCode)
-				{
-				case 0x4B:	// Cursor Left
-					PlaySmpl = -5;
-					break;
-				case 0x4D:	// Cursor Right
-					PlaySmpl = 5;
-					break;
-				case 0x73:	// Ctrl + Cursor Left
-					PlaySmpl = -60;
-					break;
-				case 0x74:	// Ctrl + Cursor Right
-					PlaySmpl = 60;
-					break;
-				case 0x49:	// Page Up
-					if (PLFileCount && /*! NextPLCmd &&*/ CurPLFile)
-					{
-						NextPLCmd = 0x01;
-						QuitPlay = true;
-					}
-					PlaySmpl = 0;
-					break;
-				case 0x51:	// Page Down
-					if (PLFileCount && /*! NextPLCmd &&*/ CurPLFile < PLFileCount - 0x01)
-					{
-						NextPLCmd = 0x00;
-						QuitPlay = true;
-					}
-					PlaySmpl = 0;
-					break;
-				default:
-					PlaySmpl = 0;
-					break;
-				}
-				if (PlaySmpl)
-				{
-					SeekVGM(true, PlaySmpl * SampleRate);
-					PosPrint = true;
-					DBus_EmitSignal(SIGNAL_SEEK);
-				}
-				break;
-#ifdef WIN32
-			case 0x1B:	// ESC
-#endif
-			case 'Q':
-				QuitPlay = true;
-				NextPLCmd = 0xFF;
-				break;
-			case ' ':
-				PauseVGM(! PausePlay);
-				PosPrint = true;
-				DBus_EmitSignal(SIGNAL_PLAYSTATUS); // Emit status change signal
-				break;
-			case 'F':	// Fading
-				FadeTime = FadeTimeN;
-				FadePlay = true;
-				break;
-			case 'R':	// Restart
-				DBus_EmitSignal(SIGNAL_SEEK);
-				RestartVGM();
-				PosPrint = true;
-				break;
-			case 'B':	// Previous file (Back)
-				if (PLFileCount && /*! NextPLCmd &&*/ CurPLFile)
-				{
-					NextPLCmd = 0x01;
-					QuitPlay = true;
-				}
-				break;
-			case 'N':	// Next file
-				if (PLFileCount && /*! NextPLCmd &&*/ CurPLFile < PLFileCount - 0x01)
-				{
-					NextPLCmd = 0x00;
-					QuitPlay = true;
-				}
-				break;
-			}
-		}
-		
-		/*if (! PauseThread && FadePlay && (! FadeTime || MasterVol == 0.0f))
-		{
-			QuitPlay = true;
-		}*/
 		if (FadeRAWLog && IsRAWLog && ! PausePlay && ! FadePlay && FadeTimeN)
 		{
 			PlaySmpl = (INT32)VGMHead.lngTotalSamples -
@@ -1730,9 +1471,6 @@ static void PlayVGM_UI(void)
 		}
 		break;
 	}
-#ifndef WIN32
-	changemode(false);
-#endif
 	
 	StopVGM();
 	

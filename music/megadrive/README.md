@@ -160,3 +160,16 @@ Main CPU: Motorola 68000
 Clock rate: 7.670454 MHz (NTSC), 7.600489 MHz (PAL)
 
 
+
+SoundLogging
+
+
+	case 0x02:
+		if (LogToWave)
+		{
+
+
+
+	PlayTimeEnd = 0;
+	QuitPlay = false;
+	while(! QuitPlay)

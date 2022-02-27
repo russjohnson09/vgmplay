@@ -452,11 +452,6 @@ void PauseStream(bool PauseOn)
 	return;
 }
 
-//UINT32 FillBuffer(WAVE_16BS* Buffer, UINT32 BufferSize)
-// moved to VGMPlay.c
-
-#ifdef WIN32
-
 static DWORD WINAPI WaveOutThread(void* Arg)
 {
 #ifdef NDEBUG
@@ -504,6 +499,8 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 				else
 					WaveHdrOut[CurBuf].dwUser |= 0x01;
 				
+								printf("WaveOutThread\n");
+
 				WrtSmpls = FillBuffer(TempBuf, SMPL_P_BUFFER);
 				
 				WaveHdrOut[CurBuf].dwBufferLength = WrtSmpls * SAMPLESIZE;
@@ -545,35 +542,3 @@ static void BufCheck(void)
 	
 	return;
 }
-
-#else	// #ifndef WIN32
-
-void WaveOutLinuxCallBack(void)
-{
-	UINT32 RetVal;
-	UINT16 CurBuf;
-	WAVE_16BS* TempBuf;
-	UINT32 WrtSmpls;
-	
-	if (! WaveOutOpen)
-		return;	// Device not opened
-	
-	CurBuf = BlocksSent % AUDIOBUFFERU;
-	TempBuf = (WAVE_16BS*)BufferOut[CurBuf];
-	
-	WrtSmpls = FillBuffer(TempBuf, SMPL_P_BUFFER);
-	
-#ifndef USE_LIBAO
-	RetVal = write(hWaveOut, TempBuf, WrtSmpls * SAMPLESIZE);
-#else
-	RetVal = ao_play(dev_ao, (char*)TempBuf, WrtSmpls * SAMPLESIZE);
-#endif
-	if (SoundLog && hFile != NULL)
-		SaveFile(WrtSmpls, TempBuf);
-	BlocksSent ++;
-	BlocksPlayed ++;
-	
-	return;
-}
-
-#endif

@@ -232,6 +232,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	while (!EndPlay) {
+						printf("vgm2wav\n");
+
 		UINT32 bufferSize = SampleRate;
 		bufferedLength = FillBuffer(sampleBuffer, bufferSize);
 		if (bufferedLength) {
