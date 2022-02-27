@@ -106,8 +106,6 @@ static void PrintChipStr(UINT8 ChipID, UINT8 SubType, UINT32 Clock);
 const wchar_t* GetTagStrEJ(const wchar_t* EngTag, const wchar_t* JapTag);
 static void ShowVGMTag(void);
 
-static void MMKey_Event(UINT8 event);
-static void PlayVGM_UI(void);
 INLINE INT8 sign(double Value);
 INLINE long int Round(double Value);
 INLINE double RoundSpecial(double Value, double RoundTo);
@@ -292,9 +290,6 @@ int main(int argc, char* argv[])
 	// ReadOptions(AppName);
 
 	VGMPlay_Init2();
-
-	MultimediaKeyHook_Init();
-	MultimediaKeyHook_SetCallback(&MMKey_Event);
 	
 	ErrRet = 0;
 	argbase = 0x01;
@@ -302,7 +297,7 @@ int main(int argc, char* argv[])
 	printf("\nFile Name:\t");
 	strcpy(VgmFileName, "../music/megadrive/01 - [Prologue].vgm");
 	// strcpy(VgmFileName, "../music/megadrive/02 - Green Hill Zone.vgm");
-	strcpy(VgmFileName, "../music/megadrive/03 - Komorebi no Musume Reading Girl 1.vgm");
+	// strcpy(VgmFileName, "../music/megadrive/03 - Komorebi no Musume Reading Girl 1.vgm");
 
 	DispFileName = VgmFileName;
 
@@ -337,8 +332,20 @@ int main(int argc, char* argv[])
 		ShowVGMTag();
 		NextPLCmd = 0x80;
 
+	PlayVGM();
 
-		PlayVGM_UI();
+// no device id given.
+	// StartStream(0);
+
+	// stream is started in another thread.
+	
+	while(1)
+	{
+		
+	}
+	// ThreadNoWait = false;
+
+		// PlayVGM_UI();
 		
 		// CloseVGMFile();
 	
@@ -1175,316 +1182,6 @@ static void ShowVGMTag(void)
 	return;
 }
 
-static void MMKey_Event(UINT8 event)
-{
-	lastMMEvent = event;
-
-	return;
-}
-
-#define LOG_SAMPLES	(SampleRate / 5)
-static void PlayVGM_UI(void)
-{
-	INT32 VGMPbSmplCount;
-	INT32 PlaySmpl;
-	UINT8 KeyCode;
-	UINT32 VGMPlaySt;
-	UINT32 VGMPlayEnd;
-	char WavFileName[MAX_PATH];
-	char* TempStr;
-	WAVE_16BS* TempBuf;
-	UINT8 RetVal;
-	UINT32 TempLng;
-	bool PosPrint;
-	bool LastUninit;
-	bool QuitPlay;
-	UINT32 PlayTimeEnd;
-	
-	// \r is overwritten by the next line.
-	printf("Initializing ...\r");
-	printf("Initializing ...\r");
-	// printf("Initializing ...\n");
-
-	printf("PlayVGM_UI\n\n");
-	
-	PlayVGM();
-	DBus_EmitSignal(SIGNAL_SEEK | SIGNAL_METADATA | SIGNAL_PLAYSTATUS | SIGNAL_CONTROLS);
-
-		printf("\n\nPlayVGM_UI post PlayVGM %d\n\n",PlayingMode);
-
-	// don't set Stream.c AUDIOBUFFERU
-	// AUDIOBUFFERU = 1000;
-
-			printf("\n FileMode post PlayVGM %d\n\n",FileMode);
-
-	switch(FileMode)
-	{
-	case 0x00:	// VGM
-		// RAW Log: no loop, no Creator, System Name set
-		IsRAWLog = (! VGMHead.lngLoopOffset && ! wcslen(VGMTag.strCreator) &&
-					(wcslen(VGMTag.strSystemNameE) || wcslen(VGMTag.strSystemNameJ)));
-		break;
-	case 0x01:	// CMF
-		IsRAWLog = false;
-		break;
-	case 0x02:	// DRO
-		IsRAWLog = true;
-		break;
-	}
-	if (! VGMHead.lngTotalSamples)
-		IsRAWLog = false;
-	
-#ifndef WIN32
-	printf("\n WIN32\n\n");
-	changemode(true);
-#endif
-			printf("\n PlayingMode post PlayVGM %d\n\n",PlayingMode);
-
-	switch(PlayingMode)
-	{
-	case 0x00:
-	case 0x02:
-		if (LogToWave)
-		{
-			strcpy(WavFileName, VgmFileName);
-			TempStr = GetFileExtension(WavFileName);
-			if (TempStr == NULL)
-				TempStr = WavFileName + strlen(WavFileName);
-			else
-				TempStr --;
-			strcpy(TempStr, ".wav");
-			
-			strcpy(SoundLogFile, WavFileName);
-		}
-		//FullBufFill = ! LogToWave;
-		
-		switch(LogToWave)
-		{
-		case 0x00:
-		case 0x02:
-			SoundLogging(LogToWave ? true : false);
-			if (FirstInit || ! StreamStarted)
-			{
-				// support smooth transistions between songs
-				RetVal = StartStream(OutputDevID);
-				if (RetVal)
-				{
-					printf("Error openning Sound Device!\n");
-					return;
-				}
-				StreamStarted = true;
-			}
-			PauseStream(PausePlay);
-			break;
-		case 0x01:
-			TempBuf = (WAVE_16BS*)malloc(SAMPLESIZE * LOG_SAMPLES);
-			if (TempBuf == NULL)
-			{
-				printf("Allocation Error!\n");
-				return;
-			}
-			
-			StartStream(0xFF);
-			RetVal = SaveFile(0x00000000, NULL);
-			if (RetVal)
-			{
-				printf("Can't open %s!\n", SoundLogFile);
-				return;
-			}
-			break;
-		}
-		break;
-	case 0x01:
-		// PlayVGM() does it all
-		//FullBufFill = true;
-		break;
-	}
-	FirstInit = false;
-	
-	VGMPlaySt = VGMPos;
-	if (VGMHead.lngGD3Offset)
-		VGMPlayEnd = VGMHead.lngGD3Offset;
-	else
-		VGMPlayEnd = VGMHead.lngEOFOffset;
-	VGMPlayEnd -= VGMPlaySt;
-	if (! FileMode)
-		VGMPlayEnd --;	// EOF Command doesn't count
-	PosPrint = true;
-	
-	PlayTimeEnd = 0;
-	QuitPlay = false;
-	while(! QuitPlay)
-	{
-		DBus_ReadWriteDispatch();
-		if(sigint)
-		{
-			QuitPlay = true;
-			NextPLCmd = 0xFF;
-		}
-		
-		if (! PausePlay || PosPrint)
-		{
-			PosPrint = false;
-			
-			VGMPbSmplCount = SampleVGM2Playback(VGMHead.lngTotalSamples);
-			PlaySmpl = VGMPos - VGMPlaySt;
-
-#ifdef WIN32
-			printf("Playing WIN32 %01.2f%%\t", 100.0 * PlaySmpl / VGMPlayEnd);
-#endif
-			if (LogToWave != 0x01)
-			{
-				PlaySmpl = (BlocksSent - BlocksPlayed) * SMPL_P_BUFFER;
-				PlaySmpl = VGMSmplPlayed - PlaySmpl;
-			}
-			else
-			{
-				PlaySmpl = VGMSmplPlayed;
-			}
-			if (! VGMCurLoop)
-			{
-				if (PlaySmpl < 0)
-					PlaySmpl = 0;
-			}
-			else
-			{
-				while(PlaySmpl < SampleVGM2Playback(VGMHead.lngTotalSamples -
-					VGMHead.lngLoopSamples))
-					PlaySmpl += SampleVGM2Playback(VGMHead.lngLoopSamples);
-			}
-			//if (PlaySmpl > VGMPbSmplCount)
-			//	PlaySmpl = VGMPbSmplCount;
-			PrintMinSec(PlaySmpl, SampleRate);
-			printf(" / ");
-			PrintMinSec(VGMPbSmplCount, SampleRate);
-			printf(" seconds");
-			printf("\r");
-			
-			// TODO this is the main thing I am interested in.
-			// Where do the samples get populated from so that this
-			// can be simplified.
-			if (LogToWave == 0x01 && ! PausePlay)
-			{
-				printf("LogToWave");
-				TempLng = FillBuffer(TempBuf, LOG_SAMPLES);
-				if (TempLng)
-					SaveFile(TempLng, TempBuf);
-				if (EndPlay)
-					break;
-			}
-			else
-			{
-#ifdef WIN32
-				Sleep(50);
-#endif
-			}
-		}
-		else
-		{
-#ifdef WIN32
-			Sleep(1);
-#endif
-		}
-#ifndef WIN32
-		if (! PausePlay && PlayingMode != 0x01)
-			WaveOutLinuxCallBack();
-		else
-			Sleep(50);
-#endif
-		if (FadeRAWLog && IsRAWLog && ! PausePlay && ! FadePlay && FadeTimeN)
-		{
-			PlaySmpl = (INT32)VGMHead.lngTotalSamples -
-						FadeTimeN * VGMSampleRate / 1500;
-			if (VGMSmplPos >= PlaySmpl)
-			{
-				FadeTime = FadeTimeN;
-				FadePlay = true;	// (FadeTime / 1500) ends at 33%
-			}
-		}
-	}
-	ThreadNoWait = false;
-	
-	// Last Uninit: ESC pressed, no playlist, last file in playlist
-	LastUninit = (NextPLCmd & 0x80) || ! PLFileCount ||
-				(NextPLCmd == 0x00 && CurPLFile >= PLFileCount - 0x01);
-	switch(PlayingMode)
-	{
-	case 0x00:
-		switch(LogToWave)
-		{
-		case 0x00:
-		case 0x02:
-			if (LastUninit)
-			{
-				StopStream();
-				StreamStarted = false;
-			}
-			else
-			{
-				if (ThreadPauseEnable)
-				{
-					ThreadPauseConfrm = false;
-					PauseThread = true;
-					while(! ThreadPauseConfrm)
-						Sleep(1);	// Wait until the Thread is finished
-				}
-				else
-				{
-					PauseThread = true;
-				}
-				if (LogToWave)
-					SaveFile(0xFFFFFFFF, NULL);
-			}
-			break;
-		case 0x01:
-			SaveFile(0xFFFFFFFF, NULL);
-			break;
-		}
-		break;
-	case 0x01:
-		if (StreamStarted)
-		{
-			StopStream();
-			StreamStarted = false;
-		}
-		break;
-	case 0x02:
-		if (LastUninit)
-		{
-			StopStream();
-			StreamStarted = false;
-#ifdef MIXER_MUTING
-#ifdef WIN32
-			mixerClose(hmixer);
-#else
-			close(hmixer);
-#endif
-#endif
-		}
-		else
-		{
-			if (ThreadPauseEnable)
-			{
-				ThreadPauseConfrm = false;
-				PauseThread = true;
-				while(! ThreadPauseConfrm)
-					Sleep(1);	// Wait until the Thread is finished
-				PauseStream(true);
-			}
-			else
-			{
-				PauseThread = true;
-			}
-		}
-		break;
-	}
-	
-	StopVGM();
-	
-	printf("\nPlaying finished.\n");
-	
-	return;
-}
 
 INLINE INT8 sign(double Value)
 {
