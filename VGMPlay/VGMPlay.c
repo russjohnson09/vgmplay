@@ -999,6 +999,7 @@ void PlayVGM(void)
 // 		break;
 // 	}
 	
+	printf("\n\n\nPlayVGM 1\n\n\n");
 	Last95Drum = 0xFFFF;
 	Last95Freq = 0;
 	Last95Max = 0xFFFF;
@@ -1010,7 +1011,8 @@ void PlayVGM(void)
 	PauseThread = false;
 	AutoStopSkip = true;
 	ForceVGMExec = false;
-	
+		printf("\n\n\nPlayVGM 2\n\n\n");
+
 	return;
 }
 
@@ -4111,6 +4113,7 @@ static bool SetMuteControl(bool mute)
 
 static void InterpretFile(UINT32 SampleCount)
 {
+	// printf("InterpretFile");
 	UINT32 TempLng;
 	UINT8 CurChip;
 	
@@ -4118,7 +4121,8 @@ static void InterpretFile(UINT32 SampleCount)
 	//	return;
 	while(Interpreting)
 		Sleep(1);
-	
+		// printf("InterpretFile 2");
+
 	if (DacCtrlUsed && SampleCount > 1)	// handle skipping
 	{
 		for (CurChip = 0x00; CurChip < DacCtrlUsed; CurChip ++)
