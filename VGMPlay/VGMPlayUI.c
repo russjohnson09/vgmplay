@@ -158,7 +158,10 @@ extern CHIPS_OPTION ChipOpts[0x02];
 extern bool ThreadPauseEnable;
 extern volatile bool ThreadPauseConfrm;
 extern bool ThreadNoWait;	// don't reset the timer
-extern UINT16 AUDIOBUFFERU;
+
+// set a variable in Stream.c
+// extern UINT16 AUDIOBUFFERU;
+
 extern UINT32 SMPL_P_BUFFER;
 extern char SoundLogFile[MAX_PATH];
 
@@ -1206,7 +1209,8 @@ static void PlayVGM_UI(void)
 
 		printf("\n\nPlayVGM_UI post PlayVGM %d\n\n",PlayingMode);
 
-	AUDIOBUFFERU = 10;
+	// don't set Stream.c AUDIOBUFFERU
+	// AUDIOBUFFERU = 10;
 
 			printf("\n FileMode post PlayVGM %d\n\n",FileMode);
 

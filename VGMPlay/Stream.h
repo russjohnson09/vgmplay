@@ -7,6 +7,16 @@
 #define MAX_PATH	PATH_MAX
 #endif
 
+// https://www.arduino.cc/en/Tutorial/Foundations/Memory
+// Memory
+// The ATmega328 has 32 KB (with 0.5 KB occupied by the bootloader). It also has 2 KB of SRAM and 1 KB of EEPROM (which can be read and written with the EEPROM library).
+
+// https://playground.arduino.cc/Code/TimerScheduler/
+
+// The ATmega328 wouldn't be able to benefit from buffering because it is a single thread and we
+// want to maximize the sample rate for the audio.
+
+// There https://arduino.stackexchange.com/questions/1813/asynchronous-function-calls-in-arduino-sketch
 #define SAMPLESIZE		sizeof(WAVE_16BS)
 #define BUFSIZE_MAX		0x1000		// Maximum Buffer Size in Bytes
 #ifndef WIN32

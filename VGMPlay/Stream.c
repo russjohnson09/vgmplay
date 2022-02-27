@@ -387,18 +387,21 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 	
 	hWaveOutThread = GetCurrentThread();
 	
-	BlocksSent = 0x00;
-	BlocksPlayed = 0x00;
+	// BlocksSent = 0x00;
+	// BlocksPlayed = 0x00;
 	while(! CloseThread)
 	{
+		printf("AUDIOBUFFERU %d\n",AUDIOBUFFERU); // 10
+		
 		for (CurBuf = 0x00; CurBuf < AUDIOBUFFERU; CurBuf ++)
 		{
 			if (WaveHdrOut[CurBuf].dwFlags & WHDR_DONE)
 			{
 				TempBuf = (WAVE_16BS*)WaveHdrOut[CurBuf].lpData;
 				
-				if (WaveHdrOut[CurBuf].dwUser & 0x01)
+				if (WaveHdrOut[CurBuf].dwUser & 0x01) {
 					BlocksPlayed ++;
+				}
 				else
 					WaveHdrOut[CurBuf].dwUser |= 0x01;
 				
