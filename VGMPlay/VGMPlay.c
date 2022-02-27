@@ -945,59 +945,8 @@ void PlayVGM(void)
 	if (VGMPos >= VGMHead.lngEOFOffset)
 		VGMEnd = true;
 	
-	
-	// printf("\nUseFM:%d\nFRMPort:%d\n",UseFM,FMPort);
-
-	// if (! PauseEmulate)
-	// {
-	// 	switch(PlayingMode)
-	// 	{
-	// 	case 0x00:
-	// 		//PauseStream(PausePlay);
-	// 		break;
-	// 	case 0x01:
-	// 		//PauseThread = PausePlay;
-	// 		SetMuteControl(PausePlay);
-	// 		break;
-	// 	case 0x02:
-	// 		//PauseStream(PausePlay);
-	// 		SetMuteControl(PausePlay);
-	// 		break;
-	// 	}
-	// }
-	
 	Chips_GeneralActions(0x00);	// Start chips
-	// also does Reset (0x01), Muting Mask (0x10) and Panning (0x20)
-	
-	// if (UseFM)
-	// {
-	// 	// TODO: get FirstInit working
-	// 	//if (! FirstInit)
-	// 	{
-	// 		StartSkipping();	// don't apply OPL Reset to make Track changes smooth
-	// 		AutoStopSkip = true;
-	// 	}
-	// 	open_real_fm();
-	// }
-	
-// 	switch(PlayingMode)
-// 	{
-// 	case 0x00:	// the application controls the playback thread
-// 		break;
-// 	case 0x01:	// FM Playback needs an independent thread
-// 		ResetPBTimer = false;
-// 		if (StartThread())
-// 		{
-// 			fprintf(stderr, "Error starting Playing Thread!\n");
-// 			return;
-// 		}
-// #ifdef CONSOLE_MODE
-// 		PauseStream(true);
-// #endif
-// 		break;
-// 	case 0x02:	// like Mode 0x00, but Hardware is also controlled (not synced)
-// 		break;
-// 	}
+
 	
 	printf("\n\n\nPlayVGM 1\n\n\n");
 	Last95Drum = 0xFFFF;
