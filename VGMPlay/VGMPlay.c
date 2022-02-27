@@ -6068,7 +6068,7 @@ static INT32 RecalcFadeVolume(void)
 
 UINT32 FillBuffer(WAVE_16BS* Buffer, UINT32 BufferSize)
 {
-	printf("FillBuffer\n");
+	// printf("FillBuffer\n");
 	UINT32 CurSmpl;
 	WAVE_32BS TempBuf;
 	INT32 CurMstVol;

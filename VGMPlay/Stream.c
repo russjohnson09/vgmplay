@@ -272,39 +272,18 @@ UINT8 StartStream(UINT8 DeviceID)
 	CloseThread = false;
 	StreamPause = false;
 	
-#ifndef USE_LIBAO
-#ifdef WIN32
-	ThreadPauseEnable = true;
-	WaveOutThreadHandle = CreateThread(NULL, 0x00, &WaveOutThread, NULL, 0x00,
-										&WaveOutThreadID);
-	if(WaveOutThreadHandle == NULL)
-		return 0xC8;		// CreateThread failed
-	CloseHandle(WaveOutThreadHandle);
-	
-	RetVal = waveOutOpen(&hWaveOut, ((UINT)DeviceID - 1), &WaveFmt, 0x00, 0x00, CALLBACK_NULL);
-	if(RetVal != MMSYSERR_NOERROR)
-#else
-	ThreadPauseEnable = false;
-#ifdef __NetBSD__
-	hWaveOut = open("/dev/audio", O_WRONLY);
-#else
-	hWaveOut = open("/dev/dsp", O_WRONLY);
-#endif
-	if (hWaveOut < 0)
-#endif
-#else	// ifdef USE_LIBAO
-	ao_initialize();
-	
-	ThreadPauseEnable = false;
-	ao_fmt.bits = WaveFmt.wBitsPerSample;
-	ao_fmt.rate = WaveFmt.nSamplesPerSec;
-	ao_fmt.channels = WaveFmt.nChannels;
-	ao_fmt.byte_format = AO_FMT_NATIVE;
-	ao_fmt.matrix = NULL;
-	
-	dev_ao = ao_open_live(ao_default_driver_id(), &ao_fmt, NULL);
-	if (dev_ao == NULL)
-#endif
+		ThreadPauseEnable = true;
+			printf("CreateThread\n");
+
+		WaveOutThreadHandle = CreateThread(NULL, 0x00, &WaveOutThread, NULL, 0x00,
+											&WaveOutThreadID);
+		if(WaveOutThreadHandle == NULL)
+			return 0xC8;		// CreateThread failed
+		CloseHandle(WaveOutThreadHandle);
+		
+		RetVal = waveOutOpen(&hWaveOut, ((UINT)DeviceID - 1), &WaveFmt, 0x00, 0x00, CALLBACK_NULL);
+
+		if(RetVal != MMSYSERR_NOERROR)
 	{
 		CloseThread = true;
 		return 0xC0;		// waveOutOpen failed
@@ -314,8 +293,6 @@ UINT8 StartStream(UINT8 DeviceID)
 	//sprintf(TestStr, "Buffer 0,0:\t%p\nBuffer 0,1:\t%p\nBuffer 1,0:\t%p\nBuffer 1,1:\t%p\n",
 	//		&BufferOut[0][0], &BufferOut[0][1], &BufferOut[1][0], &BufferOut[1][1]);
 	//AfxMessageBox(TestStr);
-#ifndef USE_LIBAO
-#ifdef WIN32
 	for (Cnt = 0x00; Cnt < AUDIOBUFFERU; Cnt ++)
 	{
 		WaveHdrOut[Cnt].lpData = BufferOut[Cnt];	// &BufferOut[Cnt][0x00];
@@ -329,80 +306,45 @@ UINT8 StartStream(UINT8 DeviceID)
 		RetVal = waveOutPrepareHeader(hWaveOut, &WaveHdrOut[Cnt], sizeof(WAVEHDR));
 		WaveHdrOut[Cnt].dwFlags |= WHDR_DONE;
 	}
-#elif defined(__NetBSD__)
-	AUDIO_INITINFO(&AudioInfo);
-	
-	AudioInfo.mode = AUMODE_PLAY;
-	AudioInfo.play.sample_rate = WaveFmt.nSamplesPerSec;
-	AudioInfo.play.channels = WaveFmt.nChannels;
-	AudioInfo.play.precision = WaveFmt.wBitsPerSample;
-	AudioInfo.play.encoding = AUDIO_ENCODING_SLINEAR;
-	
-	RetVal = ioctl(hWaveOut, AUDIO_SETINFO, &AudioInfo);
-	if (RetVal)
-		printf("Error setting audio information!\n");
-#else
-	ArgVal = (AUDIOBUFFERU << 16) | BUFSIZELD;
-	RetVal = ioctl(hWaveOut, SNDCTL_DSP_SETFRAGMENT, &ArgVal);
-	if (RetVal)
-		printf("Error setting Fragment Size!\n");
-	ArgVal = AFMT_S16_NE;
-	RetVal = ioctl(hWaveOut, SNDCTL_DSP_SETFMT, &ArgVal);
-	if (RetVal)
-		printf("Error setting Format!\n");
-	ArgVal = WaveFmt.nChannels;
-	RetVal = ioctl(hWaveOut, SNDCTL_DSP_CHANNELS, &ArgVal);
-	if (RetVal)
-		printf("Error setting Channels!\n");
-	ArgVal = WaveFmt.nSamplesPerSec;
-	RetVal = ioctl(hWaveOut, SNDCTL_DSP_SPEED, &ArgVal);
-	if (RetVal)
-		printf("Error setting Sample Rate!\n");
-#endif
-#endif	// USE_LIBAO
-	
-	if (SoundLog)
-		SaveFile(0x00000000, NULL);
 	
 	PauseThread = false;
-	
+				printf("StartStream end\n");
+
 	return 0x00;
 }
 
 UINT8 StopStream(void)
 {
 	UINT32 RetVal;
-#ifdef WIN32
 	UINT16 Cnt;
-#endif
 	
 	if (! WaveOutOpen)
 		return 0xD8;	// Thread is not active
 	
 	CloseThread = true;
-#ifdef WIN32
 	for (Cnt = 0; Cnt < 100; Cnt ++)
 	{
 		Sleep(1);
 		if (hWaveOutThread == NULL)
 			break;
 	}
-#endif
 	if (hFile != NULL)
 		SaveFile(0xFFFFFFFF, NULL);
 	WaveOutOpen = false;
 	
-#ifndef USE_LIBAO
-#ifdef WIN32
 	RetVal = waveOutReset(hWaveOut);
 	for (Cnt = 0x00; Cnt < AUDIOBUFFERU; Cnt ++)
 		RetVal = waveOutUnprepareHeader(hWaveOut, &WaveHdrOut[Cnt], sizeof(WAVEHDR));
 	
 	RetVal = waveOutClose(hWaveOut);
-	if(RetVal != MMSYSERR_NOERROR)
+	if(RetVal != MMSYSERR_NOERROR) {
 		return 0xC4;		// waveOutClose failed  -- but why ???
+
+	}
+#ifndef USE_LIBAO
+#ifdef WIN32
+
 #else
-	close(hWaveOut);
 #endif
 #else	// ifdef USE_LIBAO
 	ao_close(dev_ao);
