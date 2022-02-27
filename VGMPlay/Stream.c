@@ -410,7 +410,7 @@ static DWORD WINAPI WaveOutThread(void* Arg)
 				if (SoundLog && hFile != NULL)
 					SaveFile(WrtSmpls, TempBuf);
 				
-				BlocksSent ++;
+				// BlocksSent ++;
 			}
 		}
 	}
